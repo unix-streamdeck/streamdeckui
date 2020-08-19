@@ -6,5 +6,5 @@ It is a work heavily in progress and we welcome any contributions.
 
 # Screenshot
 
-img/current.png
+![](img/current.png)
 
