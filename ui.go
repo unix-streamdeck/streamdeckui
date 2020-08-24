@@ -1,10 +1,7 @@
 package main
 
 import (
-	"image/color"
-
 	"fyne.io/fyne"
-	"fyne.io/fyne/canvas"
 	"fyne.io/fyne/dialog"
 	"fyne.io/fyne/layout"
 	"fyne.io/fyne/theme"
@@ -13,60 +10,41 @@ import (
 )
 
 var (
-	currentButton fyne.CanvasObject
-	currentKey    api.Key
+	currentButton *button
 	config        *api.Config
 
 	win fyne.Window
 )
 
-func newButton(key api.Key, size int) fyne.CanvasObject {
-	bg := canvas.NewRectangle(color.Black)
-
-	icon := canvas.NewImageFromFile(key.Icon)
-	text := canvas.NewText(key.Text, color.White)
-	text.Alignment = fyne.TextAlignCenter
-
-	border := canvas.NewRectangle(color.Transparent)
-	border.StrokeWidth = 2
-	border.StrokeColor = &color.Gray{128}
-	border.SetMinSize(fyne.NewSize(size, size))
-
-	return fyne.NewContainerWithLayout(layout.NewMaxLayout(),
-		bg, icon, text, border)
-}
-
 func loadEditor() fyne.CanvasObject {
 	entry := widget.NewEntry()
-	entry.SetText(currentKey.Text)
+	entry.SetText(currentButton.key.Text)
 
 	entry.OnChanged = func(text string) {
-		label := currentButton.(*fyne.Container).Objects[2].(*canvas.Text)
-		label.Text = text
-		label.Refresh()
+		currentButton.text.Text = text
+		currentButton.text.Refresh()
 
-		currentKey.Text = text
-		setKey(currentKey)
+		currentButton.key.Text = text
+		currentButton.updateKey()
 	}
 
 	icon := widget.NewEntry()
-	icon.SetText(currentKey.Icon)
+	icon.SetText(currentButton.key.Icon)
 
 	icon.OnChanged = func(text string) {
-		img := currentButton.(*fyne.Container).Objects[1].(*canvas.Image)
-		img.File = text
-		img.Refresh()
+		currentButton.icon.File = text
+		currentButton.icon.Refresh()
 
-		currentKey.Icon = text
-		setKey(currentKey)
+		currentButton.key.Icon = text
+		currentButton.updateKey()
 	}
 
 	url := widget.NewEntry()
-	url.SetText(currentKey.Url)
+	url.SetText(currentButton.key.Url)
 
 	url.OnChanged = func(text string) {
-		currentKey.Url = text
-		setKey(currentKey)
+		currentButton.key.Url = text
+		currentButton.updateKey()
 	}
 
 	return widget.NewForm(
@@ -85,17 +63,6 @@ func loadToolbar(w fyne.Window) *widget.Toolbar {
 			}
 		}),
 	)
-}
-
-func setKey(key api.Key) {
-	if len(config.Pages) == 0 {
-		config.Pages = append(config.Pages, api.Page{api.Key{}})
-	}
-	config.Pages[0][0] = key
-	err := conn.SetConfig(config)
-	if err != nil {
-		dialog.ShowError(err, win)
-	}
 }
 
 func loadUI(info *api.StreamDeckInfo, w fyne.Window) fyne.CanvasObject {
@@ -121,10 +88,9 @@ func loadUI(info *api.StreamDeckInfo, w fyne.Window) fyne.CanvasObject {
 			key = page[i]
 		}
 		btn := newButton(key, size)
-		buttons = append(buttons, btn)
+		buttons = append(buttons, btn.loadUI())
 
 		if i == 0 {
-			currentKey = key
 			currentButton = btn
 		}
 	}
