@@ -106,7 +106,6 @@ func loadUI(info *api.StreamDeckInfo, w fyne.Window) fyne.CanvasObject {
 	c, err := conn.GetConfig()
 	if err != nil {
 		dialog.ShowError(err, w)
-	} else {
 		c = &api.Config{}
 	}
 	config = c
