@@ -22,8 +22,6 @@ func main() {
 		log.Fatal("Cound not read device info: " + err.Error())
 	}
 
-	log.Println("Device connected, size is", info.Cols, info.Rows)
-
 	a := app.New()
 	w := a.NewWindow("StreamDeck Unix")
 
