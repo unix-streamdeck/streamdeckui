@@ -13,41 +13,53 @@ var (
 	currentButton *button
 	config        *api.Config
 
+	entry, icon, url *widget.Entry
 	win fyne.Window
 )
 
 func loadEditor() fyne.CanvasObject {
-	entry := widget.NewEntry()
-	entry.SetText(currentButton.key.Text)
-
+	entry = widget.NewEntry()
 	entry.OnChanged = func(text string) {
 		currentButton.key.Text = text
 		currentButton.Refresh()
 		currentButton.updateKey()
 	}
 
-	icon := widget.NewEntry()
-	icon.SetText(currentButton.key.Icon)
-
+	icon = widget.NewEntry()
 	icon.OnChanged = func(text string) {
 		currentButton.key.Icon = text
 		currentButton.Refresh()
 		currentButton.updateKey()
 	}
 
-	url := widget.NewEntry()
-	url.SetText(currentButton.key.Url)
-
+	url = widget.NewEntry()
 	url.OnChanged = func(text string) {
 		currentButton.key.Url = text
 		currentButton.updateKey()
 	}
 
+	refreshEditor()
 	return widget.NewForm(
 		widget.NewFormItem("Text", entry),
 		widget.NewFormItem("Icon", icon),
 		widget.NewFormItem("Url", url),
 	)
+}
+
+func editButton(b *button) {
+	old := currentButton
+	currentButton = b
+
+	old.Refresh()
+	b.Refresh()
+
+	refreshEditor()
+}
+
+func refreshEditor() {
+	entry.SetText(currentButton.key.Text)
+	icon.SetText(currentButton.key.Icon)
+	url.SetText(currentButton.key.Url)
 }
 
 func loadToolbar(w fyne.Window) *widget.Toolbar {

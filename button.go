@@ -41,6 +41,9 @@ func (b *button) CreateRenderer() fyne.WidgetRenderer {
 	return render
 }
 
+func (b *button) Tapped(ev *fyne.PointEvent) {
+	editButton(b)
+}
 
 func (b *button) updateKey() {
 	if len(config.Pages) == 0 {
