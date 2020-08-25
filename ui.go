@@ -14,6 +14,8 @@ var (
 	config        *api.Config
 
 	entry, icon, url *widget.Entry
+	buttons          []fyne.CanvasObject
+
 	win fyne.Window
 )
 
@@ -62,6 +64,20 @@ func refreshEditor() {
 	url.SetText(currentButton.key.Url)
 }
 
+func reset() {
+	for _, b := range buttons {
+		b.(*button).key = api.Key{}
+		config.Pages[0][b.(*button).keyID] = b.(*button).key
+		b.Refresh()
+	}
+	refreshEditor()
+
+	err := conn.SetConfig(config)
+	if err != nil {
+		dialog.ShowError(err, win)
+	}
+}
+
 func loadToolbar(w fyne.Window) *widget.Toolbar {
 	return widget.NewToolbar(
 		widget.NewToolbarAction(theme.DocumentSaveIcon(), func() {
@@ -70,12 +86,19 @@ func loadToolbar(w fyne.Window) *widget.Toolbar {
 				dialog.ShowError(err, w)
 			}
 		}),
+		widget.NewToolbarAction(theme.ContentClearIcon(), func() {
+			dialog.ShowConfirm("Reset config?", "Are you sure you want to reset?",
+				func(ok bool) {
+					if ok {
+						reset()
+					}
+				}, w)
+		}),
 	)
 }
 
 func loadUI(info *api.StreamDeckInfo, w fyne.Window) fyne.CanvasObject {
 	win = w
-	var buttons []fyne.CanvasObject
 	size := int(float32(info.IconSize) / w.Canvas().Scale())
 
 	c, err := conn.GetConfig()
