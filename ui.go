@@ -21,10 +21,8 @@ func loadEditor() fyne.CanvasObject {
 	entry.SetText(currentButton.key.Text)
 
 	entry.OnChanged = func(text string) {
-		currentButton.text.Text = text
-		currentButton.text.Refresh()
-
 		currentButton.key.Text = text
+		currentButton.Refresh()
 		currentButton.updateKey()
 	}
 
@@ -32,10 +30,8 @@ func loadEditor() fyne.CanvasObject {
 	icon.SetText(currentButton.key.Icon)
 
 	icon.OnChanged = func(text string) {
-		currentButton.icon.File = text
-		currentButton.icon.Refresh()
-
 		currentButton.key.Icon = text
+		currentButton.Refresh()
 		currentButton.updateKey()
 	}
 
@@ -87,12 +83,11 @@ func loadUI(info *api.StreamDeckInfo, w fyne.Window) fyne.CanvasObject {
 		if i < len(page) {
 			key = page[i]
 		}
-		btn := newButton(key, size)
-		buttons = append(buttons, btn.loadUI())
-
-		if i == 0 {
+		btn := newButton(key, i, size)
+		if i == 1 {
 			currentButton = btn
 		}
+		buttons = append(buttons, btn)
 	}
 
 	toolbar := loadToolbar(w)
