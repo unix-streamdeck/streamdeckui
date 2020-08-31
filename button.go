@@ -13,14 +13,14 @@ import (
 
 type button struct {
 	widget.BaseWidget
-	size int
+	editor *editor
 
 	keyID int
 	key   api.Key
 }
 
-func newButton(key api.Key, id int, size int) *button {
-	b := &button{key: key, keyID: id, size: size}
+func newButton(key api.Key, id int, e *editor) *button {
+	b := &button{key: key, keyID: id, editor: e}
 	b.ExtendBaseWidget(b)
 	return b
 }
@@ -32,7 +32,7 @@ func (b *button) CreateRenderer() fyne.WidgetRenderer {
 
 	border := canvas.NewRectangle(color.Transparent)
 	border.StrokeWidth = 2
-	border.SetMinSize(fyne.NewSize(b.size, b.size))
+	border.SetMinSize(fyne.NewSize(b.editor.iconSize, b.editor.iconSize))
 
 	bg := canvas.NewRectangle(color.Black)
 	render := &buttonRenderer{border: border, text: text, icon: icon, bg: bg,
@@ -42,17 +42,17 @@ func (b *button) CreateRenderer() fyne.WidgetRenderer {
 }
 
 func (b *button) Tapped(ev *fyne.PointEvent) {
-	editButton(b)
+	b.editor.editButton(b)
 }
 
 func (b *button) updateKey() {
-	if len(config.Pages) == 0 {
-		config.Pages = append(config.Pages, api.Page{api.Key{}})
+	if len(b.editor.config.Pages) == 0 {
+		b.editor.config.Pages = append(b.editor.config.Pages, api.Page{api.Key{}})
 	}
-	config.Pages[0][b.keyID] = b.key
-	err := conn.SetConfig(config)
+	b.editor.config.Pages[0][b.keyID] = b.key
+	err := conn.SetConfig(b.editor.config)
 	if err != nil {
-		dialog.ShowError(err, win)
+		dialog.ShowError(err, b.editor.win)
 	}
 }
 
@@ -81,12 +81,12 @@ func (r *buttonRenderer) Layout(s fyne.Size) {
 }
 
 func (r *buttonRenderer) MinSize() fyne.Size {
-	iconSize := fyne.NewSize(r.b.size, r.b.size)
+	iconSize := fyne.NewSize(r.b.editor.iconSize, r.b.editor.iconSize)
 	return iconSize.Add(fyne.NewSize(buttonInset*2, buttonInset*2))
 }
 
 func (r *buttonRenderer) Refresh() {
-	if currentButton == r.b {
+	if r.b.editor.currentButton == r.b {
 		r.border.StrokeColor = theme.FocusColor()
 	} else {
 		r.border.StrokeColor = &color.Gray{128}
