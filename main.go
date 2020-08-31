@@ -25,6 +25,7 @@ func main() {
 	a := app.New()
 	w := a.NewWindow("StreamDeck Unix")
 
-	w.SetContent(loadUI(info, w))
+	e := newEditor(info, w)
+	w.SetContent(e.loadUI())
 	w.ShowAndRun()
 }
