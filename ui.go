@@ -189,7 +189,22 @@ func (e *editor) loadToolbar() *widget.Toolbar {
 			e.setPage(e.currentPage + 1)
 		}),
 		widget.NewToolbarAction(theme.ContentRemoveIcon(), func() {
+			if len(e.config.Pages) == 1 {
+				e.reset()
+				return
+			}
 
+			for i := len(e.config.Pages) - 1; i > e.currentPage; i-- {
+				e.config.Pages[i-1] = e.config.Pages[i]
+			}
+			e.config.Pages = e.config.Pages[:len(e.config.Pages)-1]
+
+			e.setPage(e.currentPage - 1)
+			err := conn.SetConfig(e.config)
+			if err != nil {
+				dialog.ShowError(err, e.win)
+				return
+			}
 		}),
 	)
 }
