@@ -46,9 +46,6 @@ func (b *button) Tapped(ev *fyne.PointEvent) {
 }
 
 func (b *button) updateKey() {
-	if len(b.editor.config.Pages) == 0 {
-		b.editor.config.Pages = append(b.editor.config.Pages, api.Page{api.Key{}})
-	}
 	b.editor.config.Pages[b.editor.currentPage][b.keyID] = b.key
 	err := conn.SetConfig(b.editor.config)
 	if err != nil {
