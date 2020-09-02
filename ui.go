@@ -96,6 +96,9 @@ func (e *editor) refresh() {
 		if e.currentButton == nil {
 			e.currentButton = b.(*button)
 		}
+		if b.(*button).keyID >= len(e.config.Pages[e.currentPage]) {
+			e.config.Pages[e.currentPage] = append(e.config.Pages[e.currentPage], api.Key{})
+		}
 		b.(*button).key = e.config.Pages[e.currentPage][b.(*button).keyID]
 		b.Refresh()
 	}
@@ -172,10 +175,11 @@ func (e *editor) loadToolbar() *widget.Toolbar {
 			if e.currentPage == len(e.config.Pages)-1 {
 				e.config.Pages = append(e.config.Pages, e.emptyPage())
 			} else {
-				head := e.config.Pages[:e.currentPage]
-				tail := e.config.Pages[e.currentPage:]
-				head = append(head, e.emptyPage())
-				e.config.Pages = append(head, tail...)
+				e.config.Pages = append(e.config.Pages, api.Page{}) // dummy value
+				for i := len(e.config.Pages) - 1; i > e.currentPage; i-- {
+					e.config.Pages[i] = e.config.Pages[i-1]
+				}
+				e.config.Pages[e.currentPage+1] = e.emptyPage()
 			}
 			err := conn.SetConfig(e.config)
 			if err != nil {
