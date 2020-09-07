@@ -84,6 +84,7 @@ func (e *editor) chooseHandler(name string) {
 		e.entry.Disable()
 		e.icon.Disable()
 	} else {
+		e.currentButton.key.IconHandler = ""
 		e.entry.Enable()
 		e.icon.Enable()
 	}
