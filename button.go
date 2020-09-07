@@ -1,6 +1,7 @@
 package main
 
 import (
+	"image"
 	"image/color"
 
 	"fyne.io/fyne"
@@ -27,8 +28,7 @@ func newButton(key api.Key, id int, e *editor) *button {
 
 func (b *button) CreateRenderer() fyne.WidgetRenderer {
 	icon := canvas.NewImageFromFile(b.key.Icon)
-	text := canvas.NewText(b.key.Text, color.White)
-	text.Alignment = fyne.TextAlignCenter
+	text := &canvas.Image{}
 
 	border := canvas.NewRectangle(color.Transparent)
 	border.StrokeWidth = 2
@@ -59,8 +59,7 @@ const (
 
 type buttonRenderer struct {
 	border, bg *canvas.Rectangle
-	text       *canvas.Text
-	icon       *canvas.Image
+	icon, text *canvas.Image
 
 	objects []fyne.CanvasObject
 
@@ -89,10 +88,8 @@ func (r *buttonRenderer) Refresh() {
 		r.border.StrokeColor = &color.Gray{128}
 	}
 
-	if r.b.key.Text != r.text.Text {
-		r.text.Text = r.b.key.Text
-		r.text.Refresh()
-	}
+	r.text.Image = r.textToImage()
+	r.text.Refresh()
 	if r.b.key.Icon != r.icon.File {
 		r.icon.File = r.b.key.Icon
 		r.icon.Refresh()
@@ -111,4 +108,13 @@ func (r *buttonRenderer) Objects() []fyne.CanvasObject {
 
 func (r *buttonRenderer) Destroy() {
 	// nothing
+}
+
+func (r *buttonRenderer) textToImage() image.Image {
+	textImg := image.NewNRGBA(image.Rect(0, 0, r.b.editor.iconSize, r.b.editor.iconSize))
+	img, err := api.DrawText(textImg, r.b.key.Text)
+	if err != nil {
+		fyne.LogError("Failed to draw text to imge", err)
+	}
+	return img
 }
