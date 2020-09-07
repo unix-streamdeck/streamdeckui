@@ -18,9 +18,11 @@ type editor struct {
 	pageCols, pageRows int
 	currentPage        int
 
-	entry, icon, url *widget.Entry
-	pageLabel        *toolbarLabel
-	buttons          []fyne.CanvasObject
+	entry, icon     *widget.Entry
+	handler         *widget.Select
+	pageLabel       *toolbarLabel
+	buttons         []fyne.CanvasObject
+	detailContainer *fyne.Container
 
 	win fyne.Window
 }
@@ -52,18 +54,44 @@ func (e *editor) loadEditor() fyne.CanvasObject {
 		e.currentButton.updateKey()
 	}
 
-	e.url = widget.NewEntry()
-	e.url.OnChanged = func(text string) {
-		e.currentButton.key.Url = text
-		e.currentButton.updateKey()
+	var ids []string
+	for id := range handlers {
+		ids = append(ids, id)
 	}
-
+	e.detailContainer = fyne.NewContainerWithLayout(layout.NewMaxLayout())
+	e.handler = widget.NewSelect(ids, e.chooseHandler)
 	e.refreshEditor()
-	return widget.NewForm(
+
+	common := widget.NewForm(
 		widget.NewFormItem("Text", e.entry),
 		widget.NewFormItem("Icon", e.icon),
-		widget.NewFormItem("Url", e.url),
+		widget.NewFormItem("Handler", e.handler),
 	)
+	return fyne.NewContainerWithLayout(layout.NewVBoxLayout(), common, e.detailContainer)
+}
+
+func (e *editor) chooseHandler(name string) {
+	handler, ok := handlers[name]
+	if !ok {
+		fyne.LogError("Handler not found "+name, nil)
+	}
+
+	e.currentButton.key.KeyHandler = name
+	if handler.hasIcon {
+		e.currentButton.key.IconHandler = name
+		e.entry.Disable()
+		e.icon.Disable()
+	} else {
+		e.entry.Enable()
+		e.icon.Enable()
+	}
+	e.currentButton.updateKey()
+	ui := handler.loadUI(e)
+	e.detailContainer.Objects = nil
+	if ui != nil {
+		e.detailContainer.Objects = append(e.detailContainer.Objects, ui)
+	}
+	e.detailContainer.Refresh()
 }
 
 func (e *editor) editButton(b *button) {
@@ -88,7 +116,12 @@ func (e *editor) emptyPage() api.Page {
 func (e *editor) refreshEditor() {
 	e.entry.SetText(e.currentButton.key.Text)
 	e.icon.SetText(e.currentButton.key.Icon)
-	e.url.SetText(e.currentButton.key.Url)
+
+	handler := e.currentButton.key.KeyHandler
+	if handler == "" {
+		handler = "Url"
+	}
+	e.handler.SetSelected(handler)
 }
 
 func (e *editor) refresh() {
