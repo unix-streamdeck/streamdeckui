@@ -19,6 +19,7 @@ var (
 		"Url":     &handler{false, loadUrlUI},
 		"Page":    &handler{false, loadPageUI},
 		"Counter": &handler{true, func(*editor) fyne.CanvasObject { return nil }},
+		"Time":    &handler{true, func(*editor) fyne.CanvasObject { return nil }},
 	}
 )
 
