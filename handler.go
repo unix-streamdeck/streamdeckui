@@ -16,7 +16,7 @@ type handler struct {
 
 var (
 	handlers = map[string]*handler{
-		"Url":     &handler{false, loadUrlUI},
+		"Url":     &handler{false, loadURLUI},
 		"Page":    &handler{false, loadPageUI},
 		"Counter": &handler{true, func(*editor) fyne.CanvasObject { return nil }},
 		"Time":    &handler{true, func(*editor) fyne.CanvasObject { return nil }},
@@ -46,7 +46,7 @@ func loadPageUI(e *editor) fyne.CanvasObject {
 	)
 }
 
-func loadUrlUI(e *editor) fyne.CanvasObject {
+func loadURLUI(e *editor) fyne.CanvasObject {
 	url := widget.NewEntry()
 	url.Text = e.currentButton.key.Url
 
