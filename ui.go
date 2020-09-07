@@ -35,8 +35,10 @@ func newEditor(info *api.StreamDeckInfo, w fyne.Window) *editor {
 	}
 
 	size := int(float32(info.IconSize) / w.Canvas().Scale())
-	return &editor{config: c, iconSize: size, currentPage: info.Page,
+	ed := &editor{config: c, iconSize: size, currentPage: info.Page,
 		pageCols: info.Cols, pageRows: info.Rows, win: w}
+	go ed.registerPageListener() // TODO remove "go" once daemon fixed
+	return ed
 }
 
 func (e *editor) loadEditor() fyne.CanvasObject {
@@ -113,6 +115,14 @@ func (e *editor) emptyPage() api.Page {
 	return keys
 }
 
+func (e *editor) pageListener(page int32) {
+	if int(page) == e.currentPage {
+		return
+	}
+
+	e.setPage(int(page))
+}
+
 func (e *editor) refreshEditor() {
 	e.entry.SetText(e.currentButton.key.Text)
 	e.icon.SetText(e.currentButton.key.Icon)
@@ -137,6 +147,13 @@ func (e *editor) refresh() {
 	}
 
 	e.refreshEditor()
+}
+
+func (e *editor) registerPageListener() {
+	err := conn.RegisterPageListener(e.pageListener)
+	if err != nil {
+		dialog.ShowError(err, e.win)
+	}
 }
 
 func (e *editor) reset() {
