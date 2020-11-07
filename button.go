@@ -6,7 +6,6 @@ import (
 
 	"fyne.io/fyne"
 	"fyne.io/fyne/canvas"
-	"fyne.io/fyne/dialog"
 	"fyne.io/fyne/theme"
 	"fyne.io/fyne/widget"
 	"github.com/unix-streamdeck/api"
@@ -47,10 +46,10 @@ func (b *button) Tapped(ev *fyne.PointEvent) {
 
 func (b *button) updateKey() {
 	b.editor.config.Pages[b.editor.currentPage][b.keyID] = b.key
-	err := conn.SetConfig(b.editor.config)
-	if err != nil {
-		dialog.ShowError(err, b.editor.win)
-	}
+	//err := conn.SetConfig(b.editor.config)
+	//if err != nil {
+	//	dialog.ShowError(err, b.editor.win)
+	//}
 }
 
 const (
@@ -112,7 +111,7 @@ func (r *buttonRenderer) Destroy() {
 
 func (r *buttonRenderer) textToImage() image.Image {
 	textImg := image.NewNRGBA(image.Rect(0, 0, r.b.editor.iconSize, r.b.editor.iconSize))
-	img, err := api.DrawText(textImg, r.b.key.Text)
+	img, err := api.DrawText(textImg, r.b.key.Text, r.b.key.TextSize, r.b.key.TextAlignment)
 	if err != nil {
 		fyne.LogError("Failed to draw text to imge", err)
 	}

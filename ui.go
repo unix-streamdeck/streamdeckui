@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 
 	"fyne.io/fyne"
 	"fyne.io/fyne/dialog"
@@ -18,7 +20,8 @@ type editor struct {
 	pageCols, pageRows int
 	currentPage        int
 
-	entry, icon     *widget.Entry
+	entry, icon, textSize     *widget.Entry
+	textAlignment *widget.Select
 	handler         *widget.Select
 	pageLabel       *toolbarLabel
 	buttons         []fyne.CanvasObject
@@ -56,6 +59,31 @@ func (e *editor) loadEditor() fyne.CanvasObject {
 		e.currentButton.updateKey()
 	}
 
+	e.textAlignment = widget.NewSelect([]string{"TOP", "MIDDLE", "BOTTOM"}, func(alignment string) {
+		e.currentButton.key.TextAlignment = alignment
+		e.currentButton.Refresh()
+		e.currentButton.updateKey()
+	})
+
+	e.textSize = widget.NewEntry()
+	e.textSize.OnChanged = func(size string) {
+		if size == "" {
+			e.currentButton.key.TextSize = 0
+			e.currentButton.Refresh()
+			e.currentButton.updateKey()
+			return
+		}
+		sizeInt, err := strconv.Atoi(size)
+		if err != nil {
+			dialog.ShowError(err, e.win)
+			return
+		}
+		e.currentButton.key.TextSize = sizeInt
+		e.currentButton.Refresh()
+		e.currentButton.updateKey()
+	}
+
+
 	var ids []string
 	for id := range handlers {
 		ids = append(ids, id)
@@ -66,6 +94,8 @@ func (e *editor) loadEditor() fyne.CanvasObject {
 
 	common := widget.NewForm(
 		widget.NewFormItem("Text", e.entry),
+		widget.NewFormItem("Text Alignment", e.textAlignment),
+		widget.NewFormItem("Font Size", e.textSize),
 		widget.NewFormItem("Icon", e.icon),
 		widget.NewFormItem("Handler", e.handler),
 	)
@@ -127,6 +157,12 @@ func (e *editor) pageListener(page int32) {
 func (e *editor) refreshEditor() {
 	e.entry.SetText(e.currentButton.key.Text)
 	e.icon.SetText(e.currentButton.key.Icon)
+	if e.currentButton.key.TextSize != 0 {
+		e.textSize.SetText(strconv.Itoa(e.currentButton.key.TextSize))
+	} else {
+		e.textSize.SetText("")
+	}
+	e.textAlignment.SetSelected(strings.ToUpper(e.currentButton.key.TextAlignment))
 
 	handler := e.currentButton.key.KeyHandler
 	if handler == "" {
@@ -189,6 +225,12 @@ func (e *editor) setPage(page int) {
 func (e *editor) loadToolbar() *widget.Toolbar {
 	e.pageLabel = newToolbarLabel()
 	return widget.NewToolbar(
+		widget.NewToolbarAction(theme.MediaPlayIcon(), func() {
+			err := conn.SetConfig(e.config)
+			if err != nil {
+				dialog.ShowError(err, e.win)
+			}
+		}),
 		widget.NewToolbarAction(theme.DocumentSaveIcon(), func() {
 			err := conn.CommitConfig()
 			if err != nil {
