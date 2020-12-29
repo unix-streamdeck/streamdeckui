@@ -54,6 +54,13 @@ func loadDefaultIconUI(e *editor) fyne.CanvasObject {
 		open.Show()
 	})
 
+	clearIcon := widget.NewButton("Clear Icon", func() {
+		e.currentButton.key.Icon = ""
+		e.currentButton.Refresh()
+		e.currentButton.updateKey()
+	})
+	iconGroup := widget.NewHBox(icon, clearIcon)
+
 	textAlignment := widget.NewSelect([]string{"TOP", "MIDDLE", "BOTTOM"}, func(alignment string) {
 		e.currentButton.key.TextAlignment = alignment
 		e.currentButton.Refresh()
@@ -79,7 +86,6 @@ func loadDefaultIconUI(e *editor) fyne.CanvasObject {
 	}
 
 	entry.SetText(e.currentButton.key.Text)
-	icon.SetText(e.currentButton.key.Icon)
 	if e.currentButton.key.TextSize != 0 {
 		textSize.SetText(strconv.Itoa(e.currentButton.key.TextSize))
 	} else {
@@ -91,7 +97,7 @@ func loadDefaultIconUI(e *editor) fyne.CanvasObject {
 		widget.NewFormItem("Text", entry),
 		widget.NewFormItem("Text Alignment", textAlignment),
 		widget.NewFormItem("Font Size", textSize),
-		widget.NewFormItem("Icon", icon),
+		widget.NewFormItem("Icon", iconGroup),
 	)
 }
 
@@ -191,7 +197,7 @@ func generateField(field api.Field, itemMap map[string]string, e *editor) *widge
 		}
 		return widget.NewFormItem(field.Title, item)
 	} else if field.Type == "File" {
-		item := widget.NewButton("Select Icon", func() {
+		file := widget.NewButton("Select File", func() {
 			open := dialog.NewFileOpen(func(file fyne.URIReadCloser, err error) {
 				if err != nil {
 					dialog.ShowError(err, e.win)
@@ -209,6 +215,12 @@ func generateField(field api.Field, itemMap map[string]string, e *editor) *widge
 			open.SetFilter(&filter)
 			open.Show()
 		})
+		clearFile := widget.NewButton("Clear File", func() {
+			itemMap[field.Name] = ""
+			e.currentButton.Refresh()
+			e.currentButton.updateKey()
+		})
+		item := widget.NewHBox(file, clearFile)
 		return widget.NewFormItem(field.Title, item)
 	} else if field.Type == "TextAlignment" {
 		item := widget.NewSelect([]string{"TOP", "MIDDLE", "BOTTOM"}, func(alignment string) {
