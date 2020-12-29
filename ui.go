@@ -121,8 +121,10 @@ func (e *editor) chooseHandler(name string, handlerType string) {
 	if name == "Default" {
 		if handlerType == "Key" {
 			ui = loadDefaultKeyUI(e)
+			e.currentButton.key.KeyHandler = "Default"
 		} else {
 			ui = loadDefaultIconUI(e)
+			e.currentButton.key.IconHandler = "Default"
 		}
 	} else {
 		if handlerType == "Key" {
@@ -130,9 +132,9 @@ func (e *editor) chooseHandler(name string, handlerType string) {
 		} else {
 			e.currentButton.key.IconHandler = name
 		}
-		e.currentButton.updateKey()
-		e.currentButton.Refresh()
 	}
+	e.currentButton.updateKey()
+	e.currentButton.Refresh()
 
 	if ui != nil {
 		if handlerType == "Key" {
