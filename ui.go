@@ -260,6 +260,12 @@ func (e *editor) loadToolbar() *widget.Toolbar {
 			if err != nil {
 				dialog.ShowError(err, e.win)
 			}
+			c, err := conn.GetConfig()
+			if err != nil {
+				dialog.ShowError(err, e.win)
+			}
+			e.config = c
+			e.refresh()
 		}),
 		widget.NewToolbarAction(theme.ContentClearIcon(), func() {
 			dialog.ShowConfirm("Reset config?", "Are you sure you want to reset?",
