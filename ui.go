@@ -2,9 +2,6 @@ package main
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
-
 	"fyne.io/fyne"
 	"fyne.io/fyne/dialog"
 	"fyne.io/fyne/layout"
@@ -20,12 +17,10 @@ type editor struct {
 	pageCols, pageRows int
 	currentPage        int
 
-	entry, icon, textSize     *widget.Entry
-	textAlignment *widget.Select
-	handler         *widget.Select
-	pageLabel       *toolbarLabel
-	buttons         []fyne.CanvasObject
-	detailContainer *fyne.Container
+	iconHandler, keyHandler               *widget.Select
+	pageLabel                             *toolbarLabel
+	buttons                               []fyne.CanvasObject
+	keyDetailSelector, iconDetailSelector *fyne.Container
 
 	win fyne.Window
 }
@@ -45,86 +40,112 @@ func newEditor(info *api.StreamDeckInfo, w fyne.Window) *editor {
 }
 
 func (e *editor) loadEditor() fyne.CanvasObject {
-	e.entry = widget.NewEntry()
-	e.entry.OnChanged = func(text string) {
-		e.currentButton.key.Text = text
-		e.currentButton.Refresh()
-		e.currentButton.updateKey()
-	}
 
-	e.icon = widget.NewEntry()
-	e.icon.OnChanged = func(text string) {
-		e.currentButton.key.Icon = text
-		e.currentButton.Refresh()
-		e.currentButton.updateKey()
-	}
+	var keyIds []string
+	var iconIds []string
 
-	e.textAlignment = widget.NewSelect([]string{"TOP", "MIDDLE", "BOTTOM"}, func(alignment string) {
-		e.currentButton.key.TextAlignment = alignment
-		e.currentButton.Refresh()
-		e.currentButton.updateKey()
-	})
-
-	e.textSize = widget.NewEntry()
-	e.textSize.OnChanged = func(size string) {
-		if size == "" {
-			e.currentButton.key.TextSize = 0
-			e.currentButton.Refresh()
-			e.currentButton.updateKey()
-			return
+	initHandlers(conn)
+	for _, module := range handlers {
+		if module.IsKey {
+			keyIds = append(keyIds, module.Name)
 		}
-		sizeInt, err := strconv.Atoi(size)
-		if err != nil {
-			dialog.ShowError(err, e.win)
-			return
+		if module.IsIcon {
+			iconIds = append(iconIds, module.Name)
 		}
-		e.currentButton.key.TextSize = sizeInt
-		e.currentButton.Refresh()
-		e.currentButton.updateKey()
 	}
-
-
-	var ids []string
-	for id := range handlers {
-		ids = append(ids, id)
-	}
-	e.detailContainer = fyne.NewContainerWithLayout(layout.NewMaxLayout())
-	e.handler = widget.NewSelect(ids, e.chooseHandler)
+	e.keyDetailSelector = fyne.NewContainerWithLayout(layout.NewMaxLayout())
+	e.iconDetailSelector = fyne.NewContainerWithLayout(layout.NewMaxLayout())
+	e.iconHandler = widget.NewSelect(iconIds, e.chooseIconHandler)
+	e.keyHandler = widget.NewSelect(keyIds, e.chooseKeyHandler)
 	e.refreshEditor()
 
-	common := widget.NewForm(
-		widget.NewFormItem("Text", e.entry),
-		widget.NewFormItem("Text Alignment", e.textAlignment),
-		widget.NewFormItem("Font Size", e.textSize),
-		widget.NewFormItem("Icon", e.icon),
-		widget.NewFormItem("Handler", e.handler),
+	iconHandler := widget.NewForm(
+		widget.NewFormItem("Icon Handler", e.iconHandler),
 	)
-	return fyne.NewContainerWithLayout(layout.NewVBoxLayout(), common, e.detailContainer)
+	keyHandler := widget.NewForm(
+		widget.NewFormItem("Key Handler", e.keyHandler),
+	)
+	return fyne.NewContainerWithLayout(layout.NewVBoxLayout(), iconHandler, e.iconDetailSelector, keyHandler, e.keyDetailSelector)
 }
 
-func (e *editor) chooseHandler(name string) {
-	handler, ok := handlers[name]
-	if !ok {
+func (e *editor) chooseKeyHandler(name string) {
+	e.chooseHandler(name, "Key")
+}
+
+func (e *editor) chooseIconHandler(name string) {
+	e.chooseHandler(name, "Icon")
+}
+
+func (e *editor) chooseHandler(name string, handlerType string) {
+	var module *api.Module
+	for _, mod := range handlers {
+		if mod.Name == name {
+			module = mod
+			break
+		}
+	}
+	if module == nil {
 		fyne.LogError("Handler not found "+name, nil)
+		return
+	}
+	if (handlerType == "Key" && !module.IsKey) || (handlerType == "Icon" && !module.IsIcon) {
+		fyne.LogError("Handler not found "+name, nil)
+		return
+	}
+	var ui fyne.CanvasObject
+
+
+	var fields []api.Field
+	var itemMap map[string]string
+	if handlerType == "Key" {
+		fields = module.KeyFields
+		if e.currentButton.key.KeyHandlerFields == nil {
+			e.currentButton.key.KeyHandlerFields = make(map[string]string)
+		}
+		itemMap = e.currentButton.key.KeyHandlerFields
+
+	} else {
+		fields = module.IconFields
+		if e.currentButton.key.IconHandlerFields == nil {
+			e.currentButton.key.IconHandlerFields = make(map[string]string)
+		}
+		itemMap = e.currentButton.key.IconHandlerFields
 	}
 
-	e.currentButton.key.KeyHandler = name
-	if handler.hasIcon {
-		e.currentButton.key.IconHandler = name
-		e.entry.Disable()
-		e.icon.Disable()
+	if fields != nil {
+		ui = loadUI(fields, itemMap, e)
 	} else {
-		e.currentButton.key.IconHandler = ""
-		e.entry.Enable()
-		e.icon.Enable()
+		ui = widget.NewForm()
 	}
-	e.currentButton.updateKey()
-	ui := handler.loadUI(e)
-	e.detailContainer.Objects = nil
+
+	if name == "Default" {
+		if handlerType == "Key" {
+			ui = loadDefaultKeyUI(e)
+		} else {
+			ui = loadDefaultIconUI(e)
+		}
+	} else {
+		if handlerType == "Key" {
+			e.currentButton.key.KeyHandler = name
+		} else {
+			e.currentButton.key.IconHandler = name
+		}
+		e.currentButton.updateKey()
+		e.currentButton.Refresh()
+	}
+
 	if ui != nil {
-		e.detailContainer.Objects = append(e.detailContainer.Objects, ui)
+		if handlerType == "Key" {
+			e.keyDetailSelector.Objects = []fyne.CanvasObject{ui}
+		} else {
+			e.iconDetailSelector.Objects = []fyne.CanvasObject{ui}
+		}
 	}
-	e.detailContainer.Refresh()
+	if handlerType == "Key" {
+		e.keyDetailSelector.Refresh()
+	} else {
+		e.iconDetailSelector.Refresh()
+	}
 }
 
 func (e *editor) editButton(b *button) {
@@ -155,20 +176,17 @@ func (e *editor) pageListener(page int32) {
 }
 
 func (e *editor) refreshEditor() {
-	e.entry.SetText(e.currentButton.key.Text)
-	e.icon.SetText(e.currentButton.key.Icon)
-	if e.currentButton.key.TextSize != 0 {
-		e.textSize.SetText(strconv.Itoa(e.currentButton.key.TextSize))
-	} else {
-		e.textSize.SetText("")
-	}
-	e.textAlignment.SetSelected(strings.ToUpper(e.currentButton.key.TextAlignment))
 
 	handler := e.currentButton.key.KeyHandler
 	if handler == "" {
-		handler = "Url"
+		handler = "Default"
 	}
-	e.handler.SetSelected(handler)
+	e.keyHandler.SetSelected(handler)
+	handler = e.currentButton.key.IconHandler
+	if handler == "" {
+		handler = "Default"
+	}
+	e.iconHandler.SetSelected(handler)
 }
 
 func (e *editor) refresh() {
@@ -233,6 +251,12 @@ func (e *editor) loadToolbar() *widget.Toolbar {
 		}),
 		widget.NewToolbarAction(theme.DocumentSaveIcon(), func() {
 			err := conn.CommitConfig()
+			if err != nil {
+				dialog.ShowError(err, e.win)
+			}
+		}),
+		widget.NewToolbarAction(theme.ContentUndoIcon(), func() {
+			err := conn.ReloadConfig()
 			if err != nil {
 				dialog.ShowError(err, e.win)
 			}

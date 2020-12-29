@@ -46,10 +46,12 @@ func (b *button) Tapped(ev *fyne.PointEvent) {
 
 func (b *button) updateKey() {
 	b.editor.config.Pages[b.editor.currentPage][b.keyID] = b.key
-	//err := conn.SetConfig(b.editor.config)
-	//if err != nil {
-	//	dialog.ShowError(err, b.editor.win)
-	//}
+	if b.editor.config.Pages[b.editor.currentPage][b.keyID].IconHandler == "Default" {
+		b.editor.config.Pages[b.editor.currentPage][b.keyID].IconHandler = ""
+	}
+	if b.editor.config.Pages[b.editor.currentPage][b.keyID].KeyHandler == "Default" {
+		b.editor.config.Pages[b.editor.currentPage][b.keyID].KeyHandler = ""
+	}
 }
 
 const (
