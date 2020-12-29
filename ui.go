@@ -297,21 +297,13 @@ func (e *editor) loadToolbar() *widget.Toolbar {
 		widget.NewToolbarSpacer(),
 
 		widget.NewToolbarAction(theme.ContentAddIcon(), func() {
-			if e.currentPage == len(e.config.Pages)-1 {
-				e.config.Pages = append(e.config.Pages, e.emptyPage())
-			} else {
-				e.config.Pages = append(e.config.Pages, api.Page{}) // dummy value
-				for i := len(e.config.Pages) - 1; i > e.currentPage; i-- {
-					e.config.Pages[i] = e.config.Pages[i-1]
-				}
-				e.config.Pages[e.currentPage+1] = e.emptyPage()
-			}
+			e.config.Pages = append(e.config.Pages, e.emptyPage())
 			err := conn.SetConfig(e.config)
 			if err != nil {
 				dialog.ShowError(err, e.win)
 				return
 			}
-			e.setPage(e.currentPage + 1)
+			e.setPage(len(e.config.Pages) - 1)
 		}),
 		widget.NewToolbarAction(theme.ContentRemoveIcon(), func() {
 			if len(e.config.Pages) == 1 {
