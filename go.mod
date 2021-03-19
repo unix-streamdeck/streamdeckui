@@ -1,4 +1,4 @@
-module streamdeckui
+module github.com/unix-streamdeck/streamdeckui
 
 go 1.16
 
