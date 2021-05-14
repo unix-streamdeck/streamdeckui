@@ -31,7 +31,7 @@ func (b *button) CreateRenderer() fyne.WidgetRenderer {
 
 	border := canvas.NewRectangle(color.Transparent)
 	border.StrokeWidth = 2
-	border.SetMinSize(fyne.NewSize(b.editor.iconSize, b.editor.iconSize))
+	border.SetMinSize(fyne.NewSize(b.editor.currentDevice.IconSize, b.editor.currentDevice.IconSize))
 
 	bg := canvas.NewRectangle(color.Black)
 	render := &buttonRenderer{border: border, text: text, icon: icon, bg: bg,
@@ -45,12 +45,12 @@ func (b *button) Tapped(ev *fyne.PointEvent) {
 }
 
 func (b *button) updateKey() {
-	b.editor.config.Pages[b.editor.currentPage][b.keyID] = b.key
-	if b.editor.config.Pages[b.editor.currentPage][b.keyID].IconHandler == "Default" {
-		b.editor.config.Pages[b.editor.currentPage][b.keyID].IconHandler = ""
+	b.editor.currentDeviceConfig.Pages[b.editor.currentDevice.Page][b.keyID] = b.key
+	if b.editor.currentDeviceConfig.Pages[b.editor.currentDevice.Page][b.keyID].IconHandler == "Default" {
+		b.editor.currentDeviceConfig.Pages[b.editor.currentDevice.Page][b.keyID].IconHandler = ""
 	}
-	if b.editor.config.Pages[b.editor.currentPage][b.keyID].KeyHandler == "Default" {
-		b.editor.config.Pages[b.editor.currentPage][b.keyID].KeyHandler = ""
+	if b.editor.currentDeviceConfig.Pages[b.editor.currentDevice.Page][b.keyID].KeyHandler == "Default" {
+		b.editor.currentDeviceConfig.Pages[b.editor.currentDevice.Page][b.keyID].KeyHandler = ""
 	}
 }
 
@@ -78,7 +78,7 @@ func (r *buttonRenderer) Layout(s fyne.Size) {
 }
 
 func (r *buttonRenderer) MinSize() fyne.Size {
-	iconSize := fyne.NewSize(r.b.editor.iconSize, r.b.editor.iconSize)
+	iconSize := fyne.NewSize(r.b.editor.currentDevice.IconSize, r.b.editor.currentDevice.IconSize)
 	return iconSize.Add(fyne.NewSize(buttonInset*2, buttonInset*2))
 }
 
@@ -112,7 +112,7 @@ func (r *buttonRenderer) Destroy() {
 }
 
 func (r *buttonRenderer) textToImage() image.Image {
-	textImg := image.NewNRGBA(image.Rect(0, 0, r.b.editor.iconSize, r.b.editor.iconSize))
+	textImg := image.NewNRGBA(image.Rect(0, 0, r.b.editor.currentDevice.IconSize, r.b.editor.currentDevice.IconSize))
 	img, err := api.DrawText(textImg, r.b.key.Text, r.b.key.TextSize, r.b.key.TextAlignment)
 	if err != nil {
 		fyne.LogError("Failed to draw text to imge", err)
