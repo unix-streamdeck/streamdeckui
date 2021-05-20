@@ -45,6 +45,9 @@ func (b *button) Tapped(ev *fyne.PointEvent) {
 }
 
 func (b *button) updateKey() {
+	if b.keyID >= len(b.editor.config.Pages[b.editor.currentPage]) {
+		return
+	}
 	b.editor.config.Pages[b.editor.currentPage][b.keyID] = b.key
 	if b.editor.config.Pages[b.editor.currentPage][b.keyID].IconHandler == "Default" {
 		b.editor.config.Pages[b.editor.currentPage][b.keyID].IconHandler = ""
