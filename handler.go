@@ -28,7 +28,7 @@ func initHandlers(conn *api.Connection) {
 
 func loadDefaultIconUI(e *editor) fyne.CanvasObject {
 
-	entry := widget.NewEntry()
+	entry := widget.NewMultiLineEntry()
 	entry.OnChanged = func(text string) {
 		e.currentButton.key.Text = text
 		e.currentButton.Refresh()
