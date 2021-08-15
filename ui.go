@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
-	"fyne.io/fyne"
-	"fyne.io/fyne/dialog"
-	"fyne.io/fyne/layout"
-	"fyne.io/fyne/theme"
-	"fyne.io/fyne/widget"
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/layout"
+	"fyne.io/fyne/v2/theme"
+	"fyne.io/fyne/v2/widget"
 	"github.com/unix-streamdeck/api"
 	"strings"
 )
@@ -74,7 +74,9 @@ func (e *editor) loadEditor() fyne.CanvasObject {
 	keyHandler := widget.NewForm(
 		widget.NewFormItem("Key Handler", e.keyHandler),
 	)
-	return fyne.NewContainerWithLayout(layout.NewVBoxLayout(), iconHandler, e.iconDetailSelector, keyHandler, e.keyDetailSelector)
+	iconForm := fyne.NewContainerWithLayout(layout.NewFormLayout(), iconHandler, e.iconDetailSelector)
+	keyForm := fyne.NewContainerWithLayout(layout.NewFormLayout(), keyHandler, e.keyDetailSelector)
+	return fyne.NewContainerWithLayout(layout.NewVBoxLayout(), iconForm, widget.NewSeparator(), keyForm)
 }
 
 func (e *editor) chooseKeyHandler(name string) {
@@ -185,14 +187,14 @@ func (e *editor) pageListener(serial string, page int32) {
 			}
 		}
 		return
-	} else {
-		e.currentDevice.Page = int(page)
 	}
+
 	if int(page) == e.currentDevice.Page {
 		return
 	}
 
-	e.setPage(int(page))
+	e.currentDevice.Page = int(page)
+	e.setPage(int(page), false)
 }
 
 func (e *editor) refreshEditor() {
@@ -201,12 +203,16 @@ func (e *editor) refreshEditor() {
 		if handler == "" {
 			handler = "Default"
 		}
-		e.keyHandler.SetSelected(handler)
+		if e.keyHandler.Selected != handler {
+			e.keyHandler.SetSelected(handler)
+		}
 		handler = e.currentButton.key.IconHandler
 		if handler == "" {
 			handler = "Default"
 		}
-		e.iconHandler.SetSelected(handler)
+		if e.iconHandler.Selected != handler {
+			e.iconHandler.SetSelected(handler)
+		}
 	}
 }
 
@@ -219,7 +225,7 @@ func (e *editor) refresh() {
 			e.currentDeviceConfig.Pages[e.currentDevice.Page] = append(e.currentDeviceConfig.Pages[e.currentDevice.Page], api.Key{})
 		}
 		b.(*button).key = e.currentDeviceConfig.Pages[e.currentDevice.Page][b.(*button).keyID]
-		b.Refresh()
+		go b.Refresh()
 	}
 
 	e.refreshEditor()
@@ -247,11 +253,13 @@ func (e *editor) reset() {
 	}
 }
 
-func (e *editor) setPage(page int) {
-	err := conn.SetPage(e.currentDevice.Serial, page)
-	if err != nil {
-		dialog.ShowError(err, e.win)
-		return
+func (e *editor) setPage(page int, pushToDbus bool) {
+	if pushToDbus {
+		err := conn.SetPage(e.currentDevice.Serial, page)
+		if err != nil {
+			dialog.ShowError(err, e.win)
+			return
+		}
 	}
 
 	text := fmt.Sprintf("%d/%d", page+1, len(e.currentDeviceConfig.Pages))
@@ -288,7 +296,7 @@ func (e *editor) loadToolbar() *widget.Toolbar {
 			e.config = c
 			e.refresh()
 		}),
-		widget.NewToolbarAction(theme.ContentClearIcon(), func() {
+		widget.NewToolbarAction(theme.DeleteIcon(), func() {
 			dialog.ShowConfirm("Reset config?", "Are you sure you want to reset?",
 				func(ok bool) {
 					if ok {
@@ -302,7 +310,7 @@ func (e *editor) loadToolbar() *widget.Toolbar {
 				return
 			}
 
-			e.setPage(e.currentDevice.Page - 1)
+			e.setPage(e.currentDevice.Page - 1, true)
 		}),
 		e.pageLabel,
 		widget.NewToolbarAction(theme.MediaSkipNextIcon(), func() {
@@ -310,7 +318,7 @@ func (e *editor) loadToolbar() *widget.Toolbar {
 				return
 			}
 
-			e.setPage(e.currentDevice.Page + 1)
+			e.setPage(e.currentDevice.Page + 1, true)
 		}),
 		widget.NewToolbarSpacer(),
 
@@ -321,7 +329,7 @@ func (e *editor) loadToolbar() *widget.Toolbar {
 				dialog.ShowError(err, e.win)
 				return
 			}
-			e.setPage(len(e.currentDeviceConfig.Pages) - 1)
+			e.setPage(len(e.currentDeviceConfig.Pages) - 1, true)
 		}),
 		widget.NewToolbarAction(theme.ContentRemoveIcon(), func() {
 			if len(e.currentDeviceConfig.Pages) == 1 {
@@ -334,7 +342,7 @@ func (e *editor) loadToolbar() *widget.Toolbar {
 			}
 			e.currentDeviceConfig.Pages = e.currentDeviceConfig.Pages[:len(e.currentDeviceConfig.Pages)-1]
 
-			e.setPage(e.currentDevice.Page - 1)
+			e.setPage(e.currentDevice.Page - 1, true)
 			err := conn.SetConfig(e.config)
 			if err != nil {
 				dialog.ShowError(err, e.win)
@@ -373,7 +381,7 @@ func (e *editor) loadUI() fyne.CanvasObject {
 	}
 
 	editor := e.loadEditor()
-	e.setPage(e.currentDevice.Page)
+	e.setPage(e.currentDevice.Page, false)
 
 	var deviceIDs []string
 
@@ -408,7 +416,7 @@ func (e *editor) loadUI() fyne.CanvasObject {
 		container.Show()
 		for i := range e.info {
 			if e.info[i].Serial == serial {
-				e.setPage(e.info[i].Page)
+				e.setPage(e.info[i].Page, false)
 			}
 		}
 	})

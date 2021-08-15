@@ -2,10 +2,11 @@ package main
 
 import (
 	"errors"
-	"fyne.io/fyne"
-	"fyne.io/fyne/dialog"
-	"fyne.io/fyne/storage"
-	"fyne.io/fyne/widget"
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/layout"
+	"fyne.io/fyne/v2/storage"
+	"fyne.io/fyne/v2/widget"
 	"github.com/unix-streamdeck/api"
 	"log"
 	"strconv"
@@ -59,7 +60,8 @@ func loadDefaultIconUI(e *editor) fyne.CanvasObject {
 		e.currentButton.Refresh()
 		e.currentButton.updateKey()
 	})
-	iconGroup := widget.NewHBox(icon, clearIcon)
+	iconGroup := fyne.NewContainerWithLayout(layout.NewGridLayout(2), icon, clearIcon)
+	//iconGroup := widget.NewForm(widget.NewFormItem("", icon), widget.NewFormItem("", clearIcon))
 
 	textAlignment := widget.NewSelect([]string{"TOP", "MIDDLE", "BOTTOM"}, func(alignment string) {
 		e.currentButton.key.TextAlignment = alignment
@@ -220,7 +222,7 @@ func generateField(field api.Field, itemMap map[string]string, e *editor) *widge
 			e.currentButton.Refresh()
 			e.currentButton.updateKey()
 		})
-		item := widget.NewHBox(file, clearFile)
+		item := fyne.NewContainerWithLayout(layout.NewGridLayout(2), file, clearFile)
 		return widget.NewFormItem(field.Title, item)
 	} else if field.Type == "TextAlignment" {
 		item := widget.NewSelect([]string{"TOP", "MIDDLE", "BOTTOM"}, func(alignment string) {

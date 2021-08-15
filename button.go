@@ -4,10 +4,10 @@ import (
 	"image"
 	"image/color"
 
-	"fyne.io/fyne"
-	"fyne.io/fyne/canvas"
-	"fyne.io/fyne/theme"
-	"fyne.io/fyne/widget"
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/theme"
+	"fyne.io/fyne/v2/widget"
 	"github.com/unix-streamdeck/api"
 )
 
@@ -31,7 +31,7 @@ func (b *button) CreateRenderer() fyne.WidgetRenderer {
 
 	border := canvas.NewRectangle(color.Transparent)
 	border.StrokeWidth = 2
-	border.SetMinSize(fyne.NewSize(b.editor.currentDevice.IconSize, b.editor.currentDevice.IconSize))
+	border.SetMinSize(fyne.NewSize(float32(b.editor.currentDevice.IconSize), float32(b.editor.currentDevice.IconSize)))
 
 	bg := canvas.NewRectangle(color.Black)
 	render := &buttonRenderer{border: border, text: text, icon: icon, bg: bg,
@@ -58,7 +58,7 @@ func (b *button) updateKey() {
 }
 
 const (
-	buttonInset = 5
+	buttonInset = 2
 )
 
 type buttonRenderer struct {
@@ -81,7 +81,7 @@ func (r *buttonRenderer) Layout(s fyne.Size) {
 }
 
 func (r *buttonRenderer) MinSize() fyne.Size {
-	iconSize := fyne.NewSize(r.b.editor.currentDevice.IconSize, r.b.editor.currentDevice.IconSize)
+	iconSize := fyne.NewSize(float32(r.b.editor.currentDevice.IconSize), float32(r.b.editor.currentDevice.IconSize))
 	return iconSize.Add(fyne.NewSize(buttonInset*2, buttonInset*2))
 }
 
@@ -96,7 +96,7 @@ func (r *buttonRenderer) Refresh() {
 	r.text.Refresh()
 	if r.b.key.Icon != r.icon.File {
 		r.icon.File = r.b.key.Icon
-		r.icon.Refresh()
+		go r.icon.Refresh()
 	}
 
 	r.border.Refresh()
