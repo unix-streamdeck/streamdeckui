@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
@@ -19,7 +20,7 @@ type editor struct {
 	currentDevice       *api.StreamDeckInfo
 	deviceButtons       map[string][]fyne.CanvasObject
 	layouts             map[string]*fyne.Container
-	deviceSelector		*widget.Select
+	deviceSelector      *widget.Select
 
 	iconHandler, keyHandler               *widget.Select
 	pageLabel                             *toolbarLabel
@@ -74,9 +75,14 @@ func (e *editor) loadEditor() fyne.CanvasObject {
 	keyHandler := widget.NewForm(
 		widget.NewFormItem("Key Handler", e.keyHandler),
 	)
-	iconForm := fyne.NewContainerWithLayout(layout.NewFormLayout(), iconHandler, e.iconDetailSelector)
-	keyForm := fyne.NewContainerWithLayout(layout.NewFormLayout(), keyHandler, e.keyDetailSelector)
-	return fyne.NewContainerWithLayout(layout.NewVBoxLayout(), iconForm, widget.NewSeparator(), keyForm)
+	iconForm := fyne.NewContainerWithLayout(layout.NewFormLayout(), fyne.NewContainerWithLayout(layout.NewCenterLayout(), iconHandler), e.iconDetailSelector)
+	keyForm := fyne.NewContainerWithLayout(layout.NewFormLayout(), fyne.NewContainerWithLayout(layout.NewCenterLayout(), keyHandler), e.keyDetailSelector)
+	tabs := container.NewAppTabs(
+		container.NewTabItem("Icon Config", iconForm),
+		container.NewTabItem("Keypress Config", keyForm),
+	)
+	tabs.SetTabLocation(container.TabLocationTop)
+	return tabs
 }
 
 func (e *editor) chooseKeyHandler(name string) {
@@ -310,7 +316,7 @@ func (e *editor) loadToolbar() *widget.Toolbar {
 				return
 			}
 
-			e.setPage(e.currentDevice.Page - 1, true)
+			e.setPage(e.currentDevice.Page-1, true)
 		}),
 		e.pageLabel,
 		widget.NewToolbarAction(theme.MediaSkipNextIcon(), func() {
@@ -318,7 +324,7 @@ func (e *editor) loadToolbar() *widget.Toolbar {
 				return
 			}
 
-			e.setPage(e.currentDevice.Page + 1, true)
+			e.setPage(e.currentDevice.Page+1, true)
 		}),
 		widget.NewToolbarSpacer(),
 
@@ -329,7 +335,7 @@ func (e *editor) loadToolbar() *widget.Toolbar {
 				dialog.ShowError(err, e.win)
 				return
 			}
-			e.setPage(len(e.currentDeviceConfig.Pages) - 1, true)
+			e.setPage(len(e.currentDeviceConfig.Pages)-1, true)
 		}),
 		widget.NewToolbarAction(theme.ContentRemoveIcon(), func() {
 			if len(e.currentDeviceConfig.Pages) == 1 {
@@ -342,7 +348,7 @@ func (e *editor) loadToolbar() *widget.Toolbar {
 			}
 			e.currentDeviceConfig.Pages = e.currentDeviceConfig.Pages[:len(e.currentDeviceConfig.Pages)-1]
 
-			e.setPage(e.currentDevice.Page - 1, true)
+			e.setPage(e.currentDevice.Page-1, true)
 			err := conn.SetConfig(e.config)
 			if err != nil {
 				dialog.ShowError(err, e.win)
