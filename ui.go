@@ -209,16 +209,12 @@ func (e *editor) refreshEditor() {
 		if handler == "" {
 			handler = "Default"
 		}
-		if e.keyHandler.Selected != handler {
-			e.keyHandler.SetSelected(handler)
-		}
+		e.keyHandler.SetSelected(handler)
 		handler = e.currentButton.key.IconHandler
 		if handler == "" {
 			handler = "Default"
 		}
-		if e.iconHandler.Selected != handler {
-			e.iconHandler.SetSelected(handler)
-		}
+		e.iconHandler.SetSelected(handler)
 	}
 }
 
@@ -231,7 +227,7 @@ func (e *editor) refresh() {
 			e.currentDeviceConfig.Pages[e.currentDevice.Page] = append(e.currentDeviceConfig.Pages[e.currentDevice.Page], api.Key{})
 		}
 		b.(*button).key = e.currentDeviceConfig.Pages[e.currentDevice.Page][b.(*button).keyID]
-		go b.Refresh()
+		b.Refresh()
 	}
 
 	e.refreshEditor()
