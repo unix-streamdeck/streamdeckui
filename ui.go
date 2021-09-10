@@ -272,21 +272,21 @@ func (e *editor) setPage(page int, pushToDbus bool) {
 }
 
 func (e *editor) loadToolbar() *widget.Toolbar {
-	e.pageLabel = newToolbarLabel()
+	e.pageLabel = newToolbarLabel("0")
 	return widget.NewToolbar(
-		widget.NewToolbarAction(theme.MediaPlayIcon(), func() {
+		newToolBarActionWithLabel("Preview", theme.UploadIcon(), func() {
 			err := conn.SetConfig(e.config)
 			if err != nil {
 				dialog.ShowError(err, e.win)
 			}
 		}),
-		widget.NewToolbarAction(theme.DocumentSaveIcon(), func() {
+		newToolBarActionWithLabel("Save", theme.DocumentSaveIcon(), func() {
 			err := conn.CommitConfig()
 			if err != nil {
 				dialog.ShowError(err, e.win)
 			}
 		}),
-		widget.NewToolbarAction(theme.ContentUndoIcon(), func() {
+		newToolBarActionWithLabel("Reload", theme.ContentUndoIcon(), func() {
 			err := conn.ReloadConfig()
 			if err != nil {
 				dialog.ShowError(err, e.win)
@@ -298,13 +298,19 @@ func (e *editor) loadToolbar() *widget.Toolbar {
 			e.config = c
 			e.refresh()
 		}),
-		widget.NewToolbarAction(theme.DeleteIcon(), func() {
+		newToolBarActionWithLabel("Reset", theme.DeleteIcon(), func() {
 			dialog.ShowConfirm("Reset config?", "Are you sure you want to reset?",
 				func(ok bool) {
 					if ok {
 						e.reset()
 					}
 				}, e.win)
+		}),
+		newToolBarActionWithLabel("Run Button", theme.MediaPlayIcon(), func() {
+			err := conn.PressButton(e.currentDevice.Serial, e.currentButton.keyID)
+			if err != nil {
+				fyne.LogError("Failed to run button press", err)
+			}
 		}),
 		widget.NewToolbarSpacer(),
 		widget.NewToolbarAction(theme.MediaSkipPreviousIcon(), func() {
@@ -443,6 +449,25 @@ func (e *editor) loadUI() fyne.CanvasObject {
 		topGrid, editor, layoutsCont)
 }
 
+type ToolbarActionWithLabel struct {
+	Icon        fyne.Resource
+	label		string
+	OnActivated func()
+	editor		editor
+}
+
+// ToolbarObject gets a button to render this ToolbarAction
+func (t *ToolbarActionWithLabel) ToolbarObject() fyne.CanvasObject {
+	button := widget.NewButtonWithIcon(t.label, t.Icon, t.OnActivated)
+	button.Importance = widget.LowImportance
+
+	return button
+}
+
+func newToolBarActionWithLabel(text string, icon fyne.Resource, onActivated func()) *ToolbarActionWithLabel {
+	return &ToolbarActionWithLabel{label: text, Icon: icon, OnActivated: onActivated}
+}
+
 type toolbarLabel struct {
 	label *widget.Label
 }
@@ -451,6 +476,6 @@ func (t *toolbarLabel) ToolbarObject() fyne.CanvasObject {
 	return t.label
 }
 
-func newToolbarLabel() *toolbarLabel {
-	return &toolbarLabel{label: widget.NewLabel("0")}
+func newToolbarLabel(text string) *toolbarLabel {
+	return &toolbarLabel{label: widget.NewLabel(text)}
 }
