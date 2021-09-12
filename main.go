@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"fyne.io/fyne/app"
+	"fyne.io/fyne/v2/app"
 	"github.com/unix-streamdeck/api"
 )
 

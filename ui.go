@@ -2,20 +2,25 @@ package main
 
 import (
 	"fmt"
-	"fyne.io/fyne"
-	"fyne.io/fyne/dialog"
-	"fyne.io/fyne/layout"
-	"fyne.io/fyne/theme"
-	"fyne.io/fyne/widget"
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/layout"
+	"fyne.io/fyne/v2/theme"
+	"fyne.io/fyne/v2/widget"
 	"github.com/unix-streamdeck/api"
+	"strings"
 )
 
 type editor struct {
-	currentButton      *button
-	config             *api.Config
-	iconSize           int
-	pageCols, pageRows int
-	currentPage        int
+	currentButton       *button
+	config              *api.Config
+	info                []*api.StreamDeckInfo
+	currentDeviceConfig *api.Deck
+	currentDevice       *api.StreamDeckInfo
+	deviceButtons       map[string][]fyne.CanvasObject
+	layouts             map[string]*fyne.Container
+	deviceSelector      *widget.Select
 
 	iconHandler, keyHandler               *widget.Select
 	pageLabel                             *toolbarLabel
@@ -25,16 +30,21 @@ type editor struct {
 	win fyne.Window
 }
 
-func newEditor(info *api.StreamDeckInfo, w fyne.Window) *editor {
+func newEditor(info []*api.StreamDeckInfo, w fyne.Window) *editor {
 	c, err := conn.GetConfig()
 	if err != nil {
 		dialog.ShowError(err, w)
 		c = &api.Config{}
 	}
-
-	size := int(float32(info.IconSize) / w.Canvas().Scale())
-	ed := &editor{config: c, iconSize: size, currentPage: info.Page,
-		pageCols: info.Cols, pageRows: info.Rows, win: w}
+	currentDevice := info[0]
+	var config *api.Deck
+	for i := range c.Decks {
+		if c.Decks[i].Serial == currentDevice.Serial {
+			config = &c.Decks[i]
+		}
+	}
+	ed := &editor{config: c, info: info, win: w, currentDevice: currentDevice, currentDeviceConfig: config,
+		deviceButtons: make(map[string][]fyne.CanvasObject), layouts: make(map[string]*fyne.Container)}
 	go ed.registerPageListener() // TODO remove "go" once daemon fixed
 	return ed
 }
@@ -65,7 +75,14 @@ func (e *editor) loadEditor() fyne.CanvasObject {
 	keyHandler := widget.NewForm(
 		widget.NewFormItem("Key Handler", e.keyHandler),
 	)
-	return fyne.NewContainerWithLayout(layout.NewVBoxLayout(), iconHandler, e.iconDetailSelector, keyHandler, e.keyDetailSelector)
+	iconForm := fyne.NewContainerWithLayout(layout.NewFormLayout(), fyne.NewContainerWithLayout(layout.NewCenterLayout(), iconHandler), e.iconDetailSelector)
+	keyForm := fyne.NewContainerWithLayout(layout.NewFormLayout(), fyne.NewContainerWithLayout(layout.NewCenterLayout(), keyHandler), e.keyDetailSelector)
+	tabs := container.NewAppTabs(
+		container.NewTabItem("Icon Config", iconForm),
+		container.NewTabItem("Keypress Config", keyForm),
+	)
+	tabs.SetTabLocation(container.TabLocationTop)
+	return tabs
 }
 
 func (e *editor) chooseKeyHandler(name string) {
@@ -93,7 +110,6 @@ func (e *editor) chooseHandler(name string, handlerType string) {
 		return
 	}
 	var ui fyne.CanvasObject
-
 
 	var fields []api.Field
 	var itemMap map[string]string
@@ -162,33 +178,44 @@ func (e *editor) editButton(b *button) {
 
 func (e *editor) emptyPage() api.Page {
 	var keys api.Page
-	for i := 0; i < e.pageCols*e.pageRows; i++ {
+	for i := 0; i < e.currentDevice.Cols*e.currentDevice.Rows; i++ {
 		keys = append(keys, api.Key{})
 	}
 
 	return keys
 }
 
-func (e *editor) pageListener(page int32) {
-	if int(page) == e.currentPage {
+func (e *editor) pageListener(serial string, page int32) {
+	if e.currentDevice.Serial != serial {
+		for i := range e.info {
+			if e.info[i].Serial == serial {
+				e.info[i].Page = int(page)
+			}
+		}
 		return
 	}
 
-	e.setPage(int(page))
+	if int(page) == e.currentDevice.Page {
+		return
+	}
+
+	e.currentDevice.Page = int(page)
+	e.setPage(int(page), false)
 }
 
 func (e *editor) refreshEditor() {
-
-	handler := e.currentButton.key.KeyHandler
-	if handler == "" {
-		handler = "Default"
+	if e.currentButton != nil {
+		handler := e.currentButton.key.KeyHandler
+		if handler == "" {
+			handler = "Default"
+		}
+		e.keyHandler.SetSelected(handler)
+		handler = e.currentButton.key.IconHandler
+		if handler == "" {
+			handler = "Default"
+		}
+		e.iconHandler.SetSelected(handler)
 	}
-	e.keyHandler.SetSelected(handler)
-	handler = e.currentButton.key.IconHandler
-	if handler == "" {
-		handler = "Default"
-	}
-	e.iconHandler.SetSelected(handler)
 }
 
 func (e *editor) refresh() {
@@ -196,10 +223,10 @@ func (e *editor) refresh() {
 		if e.currentButton == nil {
 			e.currentButton = b.(*button)
 		}
-		if b.(*button).keyID >= len(e.config.Pages[e.currentPage]) {
-			e.config.Pages[e.currentPage] = append(e.config.Pages[e.currentPage], api.Key{})
+		if b.(*button).keyID >= len(e.currentDeviceConfig.Pages[e.currentDevice.Page]) {
+			e.currentDeviceConfig.Pages[e.currentDevice.Page] = append(e.currentDeviceConfig.Pages[e.currentDevice.Page], api.Key{})
 		}
-		b.(*button).key = e.config.Pages[e.currentPage][b.(*button).keyID]
+		b.(*button).key = e.currentDeviceConfig.Pages[e.currentDevice.Page][b.(*button).keyID]
 		b.Refresh()
 	}
 
@@ -217,7 +244,7 @@ func (e *editor) reset() {
 	for _, b := range e.buttons {
 		newKey := api.Key{}
 		b.(*button).key = newKey
-		e.config.Pages[e.currentPage][b.(*button).keyID] = newKey
+		e.currentDeviceConfig.Pages[e.currentDevice.Page][b.(*button).keyID] = newKey
 		b.Refresh()
 	}
 	e.refreshEditor()
@@ -228,36 +255,38 @@ func (e *editor) reset() {
 	}
 }
 
-func (e *editor) setPage(page int) {
-	err := conn.SetPage(page)
-	if err != nil {
-		dialog.ShowError(err, e.win)
-		return
+func (e *editor) setPage(page int, pushToDbus bool) {
+	if pushToDbus {
+		err := conn.SetPage(e.currentDevice.Serial, page)
+		if err != nil {
+			dialog.ShowError(err, e.win)
+			return
+		}
 	}
 
-	text := fmt.Sprintf("%d/%d", page+1, len(e.config.Pages))
+	text := fmt.Sprintf("%d/%d", page+1, len(e.currentDeviceConfig.Pages))
 	e.pageLabel.label.SetText(text)
-	e.currentPage = page
+	e.currentDevice.Page = page
 	e.currentButton = nil
 	e.refresh()
 }
 
 func (e *editor) loadToolbar() *widget.Toolbar {
-	e.pageLabel = newToolbarLabel()
+	e.pageLabel = newToolbarLabel("0")
 	return widget.NewToolbar(
-		widget.NewToolbarAction(theme.MediaPlayIcon(), func() {
+		newToolBarActionWithLabel("Preview", theme.UploadIcon(), func() {
 			err := conn.SetConfig(e.config)
 			if err != nil {
 				dialog.ShowError(err, e.win)
 			}
 		}),
-		widget.NewToolbarAction(theme.DocumentSaveIcon(), func() {
+		newToolBarActionWithLabel("Save", theme.DocumentSaveIcon(), func() {
 			err := conn.CommitConfig()
 			if err != nil {
 				dialog.ShowError(err, e.win)
 			}
 		}),
-		widget.NewToolbarAction(theme.ContentUndoIcon(), func() {
+		newToolBarActionWithLabel("Reload", theme.ContentUndoIcon(), func() {
 			err := conn.ReloadConfig()
 			if err != nil {
 				dialog.ShowError(err, e.win)
@@ -269,7 +298,7 @@ func (e *editor) loadToolbar() *widget.Toolbar {
 			e.config = c
 			e.refresh()
 		}),
-		widget.NewToolbarAction(theme.ContentClearIcon(), func() {
+		newToolBarActionWithLabel("Reset", theme.DeleteIcon(), func() {
 			dialog.ShowConfirm("Reset config?", "Are you sure you want to reset?",
 				func(ok bool) {
 					if ok {
@@ -277,46 +306,51 @@ func (e *editor) loadToolbar() *widget.Toolbar {
 					}
 				}, e.win)
 		}),
-
+		newToolBarActionWithLabel("Run Button", theme.MediaPlayIcon(), func() {
+			err := conn.PressButton(e.currentDevice.Serial, e.currentButton.keyID)
+			if err != nil {
+				fyne.LogError("Failed to run button press", err)
+			}
+		}),
 		widget.NewToolbarSpacer(),
 		widget.NewToolbarAction(theme.MediaSkipPreviousIcon(), func() {
-			if e.currentPage == 0 {
+			if e.currentDevice.Page == 0 {
 				return
 			}
 
-			e.setPage(e.currentPage - 1)
+			e.setPage(e.currentDevice.Page-1, true)
 		}),
 		e.pageLabel,
 		widget.NewToolbarAction(theme.MediaSkipNextIcon(), func() {
-			if e.currentPage == len(e.config.Pages)-1 {
+			if e.currentDevice.Page == len(e.currentDeviceConfig.Pages)-1 {
 				return
 			}
 
-			e.setPage(e.currentPage + 1)
+			e.setPage(e.currentDevice.Page+1, true)
 		}),
 		widget.NewToolbarSpacer(),
 
 		widget.NewToolbarAction(theme.ContentAddIcon(), func() {
-			e.config.Pages = append(e.config.Pages, e.emptyPage())
+			e.currentDeviceConfig.Pages = append(e.currentDeviceConfig.Pages, e.emptyPage())
 			err := conn.SetConfig(e.config)
 			if err != nil {
 				dialog.ShowError(err, e.win)
 				return
 			}
-			e.setPage(len(e.config.Pages) - 1)
+			e.setPage(len(e.currentDeviceConfig.Pages)-1, true)
 		}),
 		widget.NewToolbarAction(theme.ContentRemoveIcon(), func() {
-			if len(e.config.Pages) == 1 {
+			if len(e.currentDeviceConfig.Pages) == 1 {
 				e.reset()
 				return
 			}
 
-			for i := len(e.config.Pages) - 1; i > e.currentPage; i-- {
-				e.config.Pages[i-1] = e.config.Pages[i]
+			for i := len(e.currentDeviceConfig.Pages) - 1; i > e.currentDevice.Page; i-- {
+				e.currentDeviceConfig.Pages[i-1] = e.currentDeviceConfig.Pages[i]
 			}
-			e.config.Pages = e.config.Pages[:len(e.config.Pages)-1]
+			e.currentDeviceConfig.Pages = e.currentDeviceConfig.Pages[:len(e.currentDeviceConfig.Pages)-1]
 
-			e.setPage(e.currentPage - 1)
+			e.setPage(e.currentDevice.Page-1, true)
 			err := conn.SetConfig(e.config)
 			if err != nil {
 				dialog.ShowError(err, e.win)
@@ -329,29 +363,109 @@ func (e *editor) loadToolbar() *widget.Toolbar {
 func (e *editor) loadUI() fyne.CanvasObject {
 	toolbar := e.loadToolbar()
 	var page api.Page
-	if len(e.config.Pages) >= 1 {
-		page = e.config.Pages[e.currentPage]
+	if len(e.currentDeviceConfig.Pages) >= 1 {
+		page = e.currentDeviceConfig.Pages[e.currentDevice.Page]
 	}
 
-	for i := 0; i < e.pageCols*e.pageRows; i++ {
-		var key api.Key
-		if i < len(page) {
-			key = page[i]
+	var layouts []*fyne.Container
+	for j := range e.info {
+		var buttons []fyne.CanvasObject
+		for i := 0; i < e.info[j].Cols*e.info[j].Rows; i++ {
+			var key api.Key
+			if i < len(page) {
+				key = page[i]
+			}
+			btn := newButton(key, i, e)
+			if i == 0 {
+				e.currentButton = btn
+			}
+			buttons = append(buttons, btn)
 		}
-		btn := newButton(key, i, e)
-		if i == 0 {
-			e.currentButton = btn
-		}
-		e.buttons = append(e.buttons, btn)
+		e.deviceButtons[e.info[j].Serial] = buttons
+		buttonGrid := fyne.NewContainerWithLayout(layout.NewGridLayout(e.info[j].Cols),
+			buttons...)
+		e.layouts[e.info[j].Serial] = buttonGrid
+		layouts = append(layouts, buttonGrid)
 	}
 
 	editor := e.loadEditor()
-	e.setPage(e.currentPage)
+	e.setPage(e.currentDevice.Page, false)
 
-	grid := fyne.NewContainerWithLayout(layout.NewGridLayout(e.pageCols),
-		e.buttons...)
-	return fyne.NewContainerWithLayout(layout.NewBorderLayout(toolbar, editor, nil, nil),
-		toolbar, editor, grid)
+	var deviceIDs []string
+
+	for i := range e.info {
+		deviceString := ""
+		if e.info[i].Cols == 5 {
+			deviceString = "Elgato Streamdeck Original: "
+		} else if e.info[i].Cols == 3 {
+			deviceString = "Elgato Streamdeck Mini: "
+		} else if e.info[i].Cols == 8 {
+			deviceString = "Elgato Streamdeck XL: "
+		}
+		deviceString += e.info[i].Serial
+		deviceIDs = append(deviceIDs, deviceString)
+	}
+
+	e.deviceSelector = widget.NewSelect(deviceIDs, func(selected string) {
+		serial := strings.Split(selected, ": ")[1]
+		for i := range e.info {
+			if e.info[i].Serial == serial {
+				e.currentDevice = e.info[i]
+			}
+			e.layouts[e.info[i].Serial].Hide()
+		}
+		for i := range e.config.Decks {
+			if e.config.Decks[i].Serial == serial {
+				e.currentDeviceConfig = &e.config.Decks[i]
+			}
+		}
+		e.buttons = e.deviceButtons[serial]
+		container := e.layouts[serial]
+		container.Show()
+		for i := range e.info {
+			if e.info[i].Serial == serial {
+				e.setPage(e.info[i].Page, false)
+			}
+		}
+	})
+	e.buttons = e.deviceButtons[deviceIDs[0]]
+	e.deviceSelector.SetSelectedIndex(0)
+
+	form := widget.NewForm(widget.NewFormItem("Device: ", e.deviceSelector))
+
+	if len(deviceIDs) == 1 {
+		form.Hide()
+	}
+
+	topGrid := fyne.NewContainerWithLayout(layout.NewBorderLayout(toolbar, form, nil, nil), toolbar, form)
+
+	layoutsCont := fyne.NewContainerWithLayout(layout.NewCenterLayout())
+
+	for i := range layouts {
+		layoutsCont.Add(layouts[i])
+	}
+
+	return fyne.NewContainerWithLayout(layout.NewBorderLayout(topGrid, editor, nil, nil),
+		topGrid, editor, layoutsCont)
+}
+
+type ToolbarActionWithLabel struct {
+	Icon        fyne.Resource
+	label		string
+	OnActivated func()
+	editor		editor
+}
+
+// ToolbarObject gets a button to render this ToolbarAction
+func (t *ToolbarActionWithLabel) ToolbarObject() fyne.CanvasObject {
+	button := widget.NewButtonWithIcon(t.label, t.Icon, t.OnActivated)
+	button.Importance = widget.LowImportance
+
+	return button
+}
+
+func newToolBarActionWithLabel(text string, icon fyne.Resource, onActivated func()) *ToolbarActionWithLabel {
+	return &ToolbarActionWithLabel{label: text, Icon: icon, OnActivated: onActivated}
 }
 
 type toolbarLabel struct {
@@ -362,6 +476,6 @@ func (t *toolbarLabel) ToolbarObject() fyne.CanvasObject {
 	return t.label
 }
 
-func newToolbarLabel() *toolbarLabel {
-	return &toolbarLabel{label: widget.NewLabel("0")}
+func newToolbarLabel(text string) *toolbarLabel {
+	return &toolbarLabel{label: widget.NewLabel(text)}
 }
