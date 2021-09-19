@@ -281,7 +281,12 @@ func (e *editor) loadToolbar() *widget.Toolbar {
 			}
 		}),
 		newToolBarActionWithLabel("Save", theme.DocumentSaveIcon(), func() {
-			err := conn.CommitConfig()
+			err := conn.SetConfig(e.config)
+			if err != nil {
+				dialog.ShowError(err, e.win)
+				return
+			}
+			err = conn.CommitConfig()
 			if err != nil {
 				dialog.ShowError(err, e.win)
 			}
