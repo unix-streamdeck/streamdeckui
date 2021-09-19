@@ -5,8 +5,8 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
-	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/widget"
+	"github.com/ncruces/zenity"
 	"github.com/unix-streamdeck/api"
 	"log"
 	"strconv"
@@ -37,22 +37,16 @@ func loadDefaultIconUI(e *editor) fyne.CanvasObject {
 	}
 
 	icon := widget.NewButton("Select Icon", func() {
-		open := dialog.NewFileOpen(func(file fyne.URIReadCloser, err error) {
-			if err != nil {
-				dialog.ShowError(err, e.win)
-				return
-			}
-			if file != nil {
-				path := strings.Replace(file.URI().String(), "file://", "", -1)
-				e.currentButton.key.Icon = path
-				e.currentButton.Refresh()
-				e.currentButton.updateKey()
-			}
-
-		}, e.win)
-		filter := storage.ExtensionFileFilter{Extensions: []string{".png", ".jpg", ".jpeg"}}
-		open.SetFilter(&filter)
-		open.Show()
+		file, err := zenity.SelectFile(zenity.FileFilters{{"Files", []string{"*.png", "*.jpg", "*.jpeg"}}})
+		if err != nil && err.Error() != "dialog canceled" {
+			dialog.ShowError(err, e.win)
+			return
+		}
+		if file != "" {
+			e.currentButton.key.Icon = file
+			e.currentButton.Refresh()
+			e.currentButton.updateKey()
+		}
 	})
 
 	clearIcon := widget.NewButton("Clear Icon", func() {
@@ -200,22 +194,29 @@ func generateField(field api.Field, itemMap map[string]string, e *editor) *widge
 		return widget.NewFormItem(field.Title, item)
 	} else if field.Type == "File" {
 		file := widget.NewButton("Select File", func() {
-			open := dialog.NewFileOpen(func(file fyne.URIReadCloser, err error) {
-				if err != nil {
-					dialog.ShowError(err, e.win)
-					return
-				}
-				if file != nil {
-					path := strings.Replace(file.URI().String(), "file://", "", -1)
-					itemMap[field.Name] = path
-					e.currentButton.Refresh()
-					e.currentButton.updateKey()
-				}
-
-			}, e.win)
-			filter := storage.ExtensionFileFilter{Extensions: field.FileTypes}
-			open.SetFilter(&filter)
-			open.Show()
+			var fileTypes []string
+			for _, fileType := range field.FileTypes {
+				fileTypes = append(fileTypes, "*"+fileType)
+			}
+			file, err := zenity.SelectFile(zenity.FileFilters{{"Files", fileTypes}})
+			//go func() {
+			//	file, err := d.File().Filter("", field.FileTypes...).Load()
+			//	//open := dialog.NewFileOpen(func(file fyne.URIReadCloser, err error) {
+			if err != nil && err.Error() != "dialog canceled" {
+				dialog.ShowError(err, e.win)
+				return
+			}
+			if file != "" {
+				itemMap[field.Name] = file
+				e.currentButton.Refresh()
+				e.currentButton.updateKey()
+			}
+			//}()
+			////
+			////}, e.win)
+			////filter := storage.ExtensionFileFilter{Extensions: field.FileTypes}
+			////open.SetFilter(&filter)
+			////open.Show()
 		})
 		clearFile := widget.NewButton("Clear File", func() {
 			itemMap[field.Name] = ""
