@@ -199,9 +199,6 @@ func generateField(field api.Field, itemMap map[string]string, e *editor) *widge
 				fileTypes = append(fileTypes, "*"+fileType)
 			}
 			file, err := zenity.SelectFile(zenity.FileFilters{{"Files", fileTypes}})
-			//go func() {
-			//	file, err := d.File().Filter("", field.FileTypes...).Load()
-			//	//open := dialog.NewFileOpen(func(file fyne.URIReadCloser, err error) {
 			if err != nil && err.Error() != "dialog canceled" {
 				dialog.ShowError(err, e.win)
 				return
@@ -211,12 +208,6 @@ func generateField(field api.Field, itemMap map[string]string, e *editor) *widge
 				e.currentButton.Refresh()
 				e.currentButton.updateKey()
 			}
-			//}()
-			////
-			////}, e.win)
-			////filter := storage.ExtensionFileFilter{Extensions: field.FileTypes}
-			////open.SetFilter(&filter)
-			////open.Show()
 		})
 		clearFile := widget.NewButton("Clear File", func() {
 			itemMap[field.Name] = ""
