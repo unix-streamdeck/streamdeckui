@@ -8,6 +8,12 @@ It is a work heavily in progress and we welcome any contributions.
 
 dbus & zenity
 
+Debian/Ubuntu and Linux Mint users need to install fallowing dependencies
+
+```
+udo apt install libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev
+```
+
 # Usage
 
 To use the streamdeck on unix you will need to have a daemon running.
