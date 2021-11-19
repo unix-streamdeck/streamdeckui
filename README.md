@@ -8,6 +8,11 @@ It is a work heavily in progress and we welcome any contributions.
 
 dbus & zenity
 
+For Debian/Ubuntu and Linux Mint users fallowing depencencies are needed
+```
+sudo apt install libgl1-mesa-dev xorg-dev
+```
+
 # Usage
 
 To use the streamdeck on unix you will need to have a daemon running.
