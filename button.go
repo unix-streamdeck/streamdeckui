@@ -91,12 +91,31 @@ func (r *buttonRenderer) Refresh() {
 	} else {
 		r.border.StrokeColor = &color.Gray{128}
 	}
-
 	r.text.Image = r.textToImage()
 	r.text.Refresh()
-	if r.b.key.Icon != r.icon.File {
-		r.icon.File = r.b.key.Icon
-		go r.icon.Refresh()
+	if r.b.key.IconHandler != "" && r.b.key.IconHandler != "Default" {
+		r.icon.File = ""
+		go func() {
+			currentPage := r.b.editor.currentDevice.Page
+			currentDev := r.b.editor.currentDevice.Serial
+			img, err := conn.GetHandlerExample(r.b.editor.currentDevice.Serial, r.b.key)
+			if err != nil {
+				fyne.LogError("Failed to get image", err)
+			} else {
+				if currentPage == r.b.editor.currentDevice.Page && currentDev == r.b.editor.currentDevice.Serial {
+					r.icon.Image = img
+					r.icon.Refresh()
+				}
+			}
+		}()
+	} else {
+		r.text.Image = r.textToImage()
+		r.text.Refresh()
+		if r.b.key.Icon != r.icon.File || r.icon.Image != nil {
+			r.icon.Image = nil
+			r.icon.File = r.b.key.Icon
+			go r.icon.Refresh()
+		}
 	}
 
 	r.border.Refresh()
@@ -116,7 +135,13 @@ func (r *buttonRenderer) Destroy() {
 
 func (r *buttonRenderer) textToImage() image.Image {
 	textImg := image.NewNRGBA(image.Rect(0, 0, r.b.editor.currentDevice.IconSize, r.b.editor.currentDevice.IconSize))
-	img, err := api.DrawText(textImg, r.b.key.Text, r.b.key.TextSize, r.b.key.TextAlignment)
+	var img image.Image
+	var err error
+	if r.b.key.IconHandler == "" || r.b.key.IconHandler == "Default" {
+		img, err = api.DrawText(textImg, r.b.key.Text, r.b.key.TextSize, r.b.key.TextAlignment)
+	} else {
+		img = textImg
+	}
 	if err != nil {
 		fyne.LogError("Failed to draw text to imge", err)
 	}
