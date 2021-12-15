@@ -245,6 +245,17 @@ func generateField(field api.Field, itemMap map[string]string, e *editor) *widge
 			e.currentButton.updateKey()
 		}
 		return widget.NewFormItem(field.Title, item)
+	} else if field.Type == "Select" {
+		item := widget.NewSelect(field.Values, func(value string) {
+			itemMap[field.Name] = value
+			e.currentButton.Refresh()
+			e.currentButton.updateKey()
+		})
+		action, ok := itemMap[field.Name]
+		if ok {
+			item.SetSelected(action)
+		}
+		return widget.NewFormItem(field.Title, item)
 	}
 	return nil
 }
