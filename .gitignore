@@ -4,7 +4,6 @@
 *.dll
 *.so
 *.dylib
-streamdeckui
 
 # Test binary, built with `go test -c`
 *.test
@@ -13,3 +12,4 @@ streamdeckui
 *.out
 
 .idea
+streamdeckui
