@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"strings"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
@@ -9,11 +11,11 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/unix-streamdeck/api"
-	"strings"
 )
 
 type editor struct {
 	currentButton       *button
+	copiedButton        *button
 	config              *api.Config
 	info                []*api.StreamDeckInfo
 	currentDeviceConfig *api.Deck
@@ -317,6 +319,25 @@ func (e *editor) loadToolbar() *widget.Toolbar {
 				fyne.LogError("Failed to run button press", err)
 			}
 		}),
+		newToolBarActionWithLabel("Copy Button", theme.ContentCopyIcon(), func() {
+			e.copiedButton = e.currentButton
+			/*
+				err := conn.PressButton(e.currentDevice.Serial, e.currentButton.keyID)
+				if err != nil {
+					fyne.LogError("Failed to run button press", err)
+				}
+			*/
+		}),
+		newToolBarActionWithLabel("Paste Button", theme.ContentPasteIcon(), func() {
+			e.currentButton.key = e.copiedButton.key
+			e.refreshEditor()
+			/*
+				err := conn.PressButton(e.currentDevice.Serial, e.currentButton.keyID)
+				if err != nil {
+					fyne.LogError("Failed to run button press", err)
+				}
+			*/
+		}),
 		widget.NewToolbarSpacer(),
 		widget.NewToolbarAction(theme.MediaSkipPreviousIcon(), func() {
 			if e.currentDevice.Page == 0 {
@@ -456,9 +477,9 @@ func (e *editor) loadUI() fyne.CanvasObject {
 
 type ToolbarActionWithLabel struct {
 	Icon        fyne.Resource
-	label		string
+	label       string
 	OnActivated func()
-	editor		editor
+	editor      editor
 }
 
 // ToolbarObject gets a button to render this ToolbarAction
