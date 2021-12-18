@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -321,22 +322,13 @@ func (e *editor) loadToolbar() *widget.Toolbar {
 		}),
 		newToolBarActionWithLabel("Copy Button", theme.ContentCopyIcon(), func() {
 			e.copiedButton = e.currentButton
-			/*
-				err := conn.PressButton(e.currentDevice.Serial, e.currentButton.keyID)
-				if err != nil {
-					fyne.LogError("Failed to run button press", err)
-				}
-			*/
 		}),
 		newToolBarActionWithLabel("Paste Button", theme.ContentPasteIcon(), func() {
-			e.currentButton.key = e.copiedButton.key
-			e.refreshEditor()
-			/*
-				err := conn.PressButton(e.currentDevice.Serial, e.currentButton.keyID)
-				if err != nil {
-					fyne.LogError("Failed to run button press", err)
-				}
-			*/
+			log.Println(e.copiedButton)
+			if e.copiedButton != nil {
+				e.currentButton.key = e.copiedButton.key
+				e.refreshEditor()
+			}
 		}),
 		widget.NewToolbarSpacer(),
 		widget.NewToolbarAction(theme.MediaSkipPreviousIcon(), func() {
