@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -274,6 +273,32 @@ func (e *editor) setPage(page int, pushToDbus bool) {
 	e.refresh()
 }
 
+// Save config. Used by both the toolbar action and the keyboard shortcut
+func (e *editor) saveConfig() {
+	err := conn.SetConfig(e.config)
+	if err != nil {
+		dialog.ShowError(err, e.win)
+		return
+	}
+	err = conn.CommitConfig()
+	if err != nil {
+		dialog.ShowError(err, e.win)
+	}
+}
+
+// Copy current button. Used by both the toolbar action and the keyboard shortcut
+func (e *editor) copyButton() {
+	e.copiedButton = e.currentButton
+}
+
+// Paste copied button, if any. Used by both the toolbar action and the keyboard shortcut
+func (e *editor) pasteButton() {
+	if e.copiedButton != nil {
+		e.currentButton.key = e.copiedButton.key
+		e.refreshEditor()
+	}
+}
+
 func (e *editor) loadToolbar() *widget.Toolbar {
 	e.pageLabel = newToolbarLabel("0")
 	return widget.NewToolbar(
@@ -283,17 +308,7 @@ func (e *editor) loadToolbar() *widget.Toolbar {
 				dialog.ShowError(err, e.win)
 			}
 		}),
-		newToolBarActionWithLabel("Save", theme.DocumentSaveIcon(), func() {
-			err := conn.SetConfig(e.config)
-			if err != nil {
-				dialog.ShowError(err, e.win)
-				return
-			}
-			err = conn.CommitConfig()
-			if err != nil {
-				dialog.ShowError(err, e.win)
-			}
-		}),
+		newToolBarActionWithLabel("Save", theme.DocumentSaveIcon(), e.saveConfig),
 		newToolBarActionWithLabel("Reload", theme.ContentUndoIcon(), func() {
 			err := conn.ReloadConfig()
 			if err != nil {
@@ -320,16 +335,8 @@ func (e *editor) loadToolbar() *widget.Toolbar {
 				fyne.LogError("Failed to run button press", err)
 			}
 		}),
-		newToolBarActionWithLabel("Copy Button", theme.ContentCopyIcon(), func() {
-			e.copiedButton = e.currentButton
-		}),
-		newToolBarActionWithLabel("Paste Button", theme.ContentPasteIcon(), func() {
-			log.Println(e.copiedButton)
-			if e.copiedButton != nil {
-				e.currentButton.key = e.copiedButton.key
-				e.refreshEditor()
-			}
-		}),
+		newToolBarActionWithLabel("Copy Button", theme.ContentCopyIcon(), e.copyButton),
+		newToolBarActionWithLabel("Paste Button", theme.ContentPasteIcon(), e.pasteButton),
 		widget.NewToolbarSpacer(),
 		widget.NewToolbarAction(theme.MediaSkipPreviousIcon(), func() {
 			if e.currentDevice.Page == 0 {
