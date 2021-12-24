@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"strings"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
@@ -9,11 +11,11 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/unix-streamdeck/api"
-	"strings"
 )
 
 type editor struct {
 	currentButton       *button
+	copiedButton        *button
 	config              *api.Config
 	info                []*api.StreamDeckInfo
 	currentDeviceConfig *api.Deck
@@ -271,6 +273,32 @@ func (e *editor) setPage(page int, pushToDbus bool) {
 	e.refresh()
 }
 
+// Save config. Used by both the toolbar action and the keyboard shortcut
+func (e *editor) saveConfig() {
+	err := conn.SetConfig(e.config)
+	if err != nil {
+		dialog.ShowError(err, e.win)
+		return
+	}
+	err = conn.CommitConfig()
+	if err != nil {
+		dialog.ShowError(err, e.win)
+	}
+}
+
+// Copy current button. Used by both the toolbar action and the keyboard shortcut
+func (e *editor) copyButton() {
+	e.copiedButton = e.currentButton
+}
+
+// Paste copied button, if any. Used by both the toolbar action and the keyboard shortcut
+func (e *editor) pasteButton() {
+	if e.copiedButton != nil {
+		e.currentButton.key = e.copiedButton.key
+		e.refreshEditor()
+	}
+}
+
 func (e *editor) loadToolbar() *widget.Toolbar {
 	e.pageLabel = newToolbarLabel("0")
 	return widget.NewToolbar(
@@ -280,17 +308,7 @@ func (e *editor) loadToolbar() *widget.Toolbar {
 				dialog.ShowError(err, e.win)
 			}
 		}),
-		newToolBarActionWithLabel("Save", theme.DocumentSaveIcon(), func() {
-			err := conn.SetConfig(e.config)
-			if err != nil {
-				dialog.ShowError(err, e.win)
-				return
-			}
-			err = conn.CommitConfig()
-			if err != nil {
-				dialog.ShowError(err, e.win)
-			}
-		}),
+		newToolBarActionWithLabel("Save", theme.DocumentSaveIcon(), e.saveConfig),
 		newToolBarActionWithLabel("Reload", theme.ContentUndoIcon(), func() {
 			err := conn.ReloadConfig()
 			if err != nil {
@@ -317,6 +335,8 @@ func (e *editor) loadToolbar() *widget.Toolbar {
 				fyne.LogError("Failed to run button press", err)
 			}
 		}),
+		newToolBarActionWithLabel("Copy Button", theme.ContentCopyIcon(), e.copyButton),
+		newToolBarActionWithLabel("Paste Button", theme.ContentPasteIcon(), e.pasteButton),
 		widget.NewToolbarSpacer(),
 		widget.NewToolbarAction(theme.MediaSkipPreviousIcon(), func() {
 			if e.currentDevice.Page == 0 {
@@ -456,9 +476,9 @@ func (e *editor) loadUI() fyne.CanvasObject {
 
 type ToolbarActionWithLabel struct {
 	Icon        fyne.Resource
-	label		string
+	label       string
 	OnActivated func()
-	editor		editor
+	editor      editor
 }
 
 // ToolbarObject gets a button to render this ToolbarAction
