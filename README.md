@@ -1,5 +1,9 @@
 # StreamDeck UI
 
+# Help Wanted!
+
+If you want to help with the development of streamdeckd and it's related repos, either by submitting code, finding/fixing bugs, or just replying to issues, please join this discord server: https://discord.gg/mgNAKuk5
+
 This repository contains a graphical configuration tool for the StreamDeck
 devices that works on Unix, Linux and other OS.
 It is a work heavily in progress and we welcome any contributions.
