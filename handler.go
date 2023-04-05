@@ -8,7 +8,6 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/ncruces/zenity"
 	"github.com/unix-streamdeck/api"
-	"log"
 	"strconv"
 	"strings"
 )
@@ -31,7 +30,7 @@ func loadDefaultIconUI(e *editor) fyne.CanvasObject {
 
 	entry := widget.NewMultiLineEntry()
 	entry.OnChanged = func(text string) {
-		e.currentButton.key.Text = text
+		e.currentButton.currentConfig.Text = text
 		e.currentButton.Refresh()
 		e.currentButton.updateKey()
 	}
@@ -43,14 +42,14 @@ func loadDefaultIconUI(e *editor) fyne.CanvasObject {
 			return
 		}
 		if file != "" {
-			e.currentButton.key.Icon = file
+			e.currentButton.currentConfig.Icon = file
 			e.currentButton.Refresh()
 			e.currentButton.updateKey()
 		}
 	})
 
 	clearIcon := widget.NewButton("Clear Icon", func() {
-		e.currentButton.key.Icon = ""
+		e.currentButton.currentConfig.Icon = ""
 		e.currentButton.Refresh()
 		e.currentButton.updateKey()
 	})
@@ -58,7 +57,7 @@ func loadDefaultIconUI(e *editor) fyne.CanvasObject {
 	//iconGroup := widget.NewForm(widget.NewFormItem("", icon), widget.NewFormItem("", clearIcon))
 
 	textAlignment := widget.NewSelect([]string{"TOP", "MIDDLE", "BOTTOM"}, func(alignment string) {
-		e.currentButton.key.TextAlignment = alignment
+		e.currentButton.currentConfig.TextAlignment = alignment
 		e.currentButton.Refresh()
 		e.currentButton.updateKey()
 	})
@@ -66,7 +65,7 @@ func loadDefaultIconUI(e *editor) fyne.CanvasObject {
 	textSize := widget.NewEntry()
 	textSize.OnChanged = func(size string) {
 		if size == "" {
-			e.currentButton.key.TextSize = 0
+			e.currentButton.currentConfig.TextSize = 0
 			e.currentButton.Refresh()
 			e.currentButton.updateKey()
 			return
@@ -76,18 +75,18 @@ func loadDefaultIconUI(e *editor) fyne.CanvasObject {
 			dialog.ShowError(err, e.win)
 			return
 		}
-		e.currentButton.key.TextSize = sizeInt
+		e.currentButton.currentConfig.TextSize = sizeInt
 		e.currentButton.Refresh()
 		e.currentButton.updateKey()
 	}
 
-	entry.SetText(e.currentButton.key.Text)
-	if e.currentButton.key.TextSize != 0 {
-		textSize.SetText(strconv.Itoa(e.currentButton.key.TextSize))
+	entry.SetText(e.currentButton.currentConfig.Text)
+	if e.currentButton.currentConfig.TextSize != 0 {
+		textSize.SetText(strconv.Itoa(e.currentButton.currentConfig.TextSize))
 	} else {
 		textSize.SetText("")
 	}
-	textAlignment.SetSelected(strings.ToUpper(e.currentButton.key.TextAlignment))
+	textAlignment.SetSelected(strings.ToUpper(e.currentButton.currentConfig.TextAlignment))
 
 	return widget.NewForm(
 		widget.NewFormItem("Text", entry),
@@ -100,18 +99,18 @@ func loadDefaultIconUI(e *editor) fyne.CanvasObject {
 func loadDefaultKeyUI(e *editor) fyne.CanvasObject {
 
 	url := widget.NewEntry()
-	url.Text = e.currentButton.key.Url
+	url.Text = e.currentButton.currentConfig.Url
 	page := widget.NewEntry()
-	page.Text = strconv.FormatInt(int64(e.currentButton.key.SwitchPage), 10)
+	page.Text = strconv.FormatInt(int64(e.currentButton.currentConfig.SwitchPage), 10)
 	keyBind := widget.NewEntry()
-	keyBind.Text = e.currentButton.key.Keybind
+	keyBind.Text = e.currentButton.currentConfig.Keybind
 	command := widget.NewEntry()
-	command.Text = e.currentButton.key.Command
+	command.Text = e.currentButton.currentConfig.Command
 	brightness := widget.NewEntry()
-	brightness.Text = strconv.FormatInt(int64(e.currentButton.key.Brightness), 10)
+	brightness.Text = strconv.FormatInt(int64(e.currentButton.currentConfig.Brightness), 10)
 
 	url.OnChanged = func(text string) {
-		e.currentButton.key.Url = text
+		e.currentButton.currentConfig.Url = text
 		e.currentButton.Refresh()
 		e.currentButton.updateKey()
 	}
@@ -126,19 +125,19 @@ func loadDefaultKeyUI(e *editor) fyne.CanvasObject {
 			}
 			pageNum = int(num)
 		}
-		e.currentButton.key.SwitchPage = pageNum
+		e.currentButton.currentConfig.SwitchPage = pageNum
 		e.currentButton.Refresh()
 		e.currentButton.updateKey()
 	}
 
 	keyBind.OnChanged = func(text string) {
-		e.currentButton.key.Keybind = text
+		e.currentButton.currentConfig.Keybind = text
 		e.currentButton.Refresh()
 		e.currentButton.updateKey()
 	}
 
 	command.OnChanged = func(text string) {
-		e.currentButton.key.Command = text
+		e.currentButton.currentConfig.Command = text
 		e.currentButton.Refresh()
 		e.currentButton.updateKey()
 	}
@@ -157,7 +156,7 @@ func loadDefaultKeyUI(e *editor) fyne.CanvasObject {
 			}
 			brightness = int(num)
 		}
-		e.currentButton.key.Brightness = brightness
+		e.currentButton.currentConfig.Brightness = brightness
 		e.currentButton.Refresh()
 		e.currentButton.updateKey()
 	}
@@ -187,7 +186,6 @@ func generateField(field api.Field, itemMap map[string]string, e *editor) *widge
 		item.Text = itemMap[field.Name]
 		item.OnChanged = func(text string) {
 			itemMap[field.Name] = text
-			log.Println(e.currentButton.key.IconHandlerFields["check_command"])
 			e.currentButton.Refresh()
 			e.currentButton.updateKey()
 		}
@@ -245,17 +243,17 @@ func generateField(field api.Field, itemMap map[string]string, e *editor) *widge
 			e.currentButton.updateKey()
 		}
 		return widget.NewFormItem(field.Title, item)
-	} else if field.Type == "Select" {
-		item := widget.NewSelect(field.Values, func(value string) {
-			itemMap[field.Name] = value
-			e.currentButton.Refresh()
-			e.currentButton.updateKey()
-		})
-		action, ok := itemMap[field.Name]
-		if ok {
-			item.SetSelected(action)
-		}
-		return widget.NewFormItem(field.Title, item)
+	//} else if field.Type == "Select" {
+	//	item := widget.NewSelect(field.Values, func(value string) {
+	//		itemMap[field.Name] = value
+	//		e.currentButton.Refresh()
+	//		e.currentButton.updateKey()
+	//	})
+	//	action, ok := itemMap[field.Name]
+	//	if ok {
+	//		item.SetSelected(action)
+	//	}
+	//	return widget.NewFormItem(field.Title, item)
 	}
 	return nil
 }
