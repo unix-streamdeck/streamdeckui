@@ -2,15 +2,16 @@ package main
 
 import (
 	"errors"
+	"log"
+	"strconv"
+	"strings"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 	"github.com/ncruces/zenity"
 	"github.com/unix-streamdeck/api"
-	"log"
-	"strconv"
-	"strings"
 )
 
 var (
@@ -254,6 +255,16 @@ func generateField(field api.Field, itemMap map[string]string, e *editor) *widge
 		action, ok := itemMap[field.Name]
 		if ok {
 			item.SetSelected(action)
+		}
+		return widget.NewFormItem(field.Title, item)
+	} else if field.Type == "Password" {
+		item := widget.NewPasswordEntry()
+		item.Text = itemMap[field.Name]
+		item.OnChanged = func(text string) {
+			itemMap[field.Name] = text
+			log.Println(e.currentButton.key.IconHandlerFields["check_command"])
+			e.currentButton.Refresh()
+			e.currentButton.updateKey()
 		}
 		return widget.NewFormItem(field.Title, item)
 	}
