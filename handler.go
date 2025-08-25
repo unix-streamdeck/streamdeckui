@@ -2,15 +2,16 @@ package main
 
 import (
 	"errors"
+	"log"
+	"strconv"
+	"strings"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 	"github.com/ncruces/zenity"
 	"github.com/unix-streamdeck/api"
-	"log"
-	"strconv"
-	"strings"
 )
 
 var (
@@ -37,7 +38,7 @@ func loadDefaultIconUI(e *editor) fyne.CanvasObject {
 	}
 
 	icon := widget.NewButton("Select Icon", func() {
-		file, err := zenity.SelectFile(zenity.FileFilters{{"Files", []string{"*.png", "*.jpg", "*.jpeg"}}})
+		file, err := zenity.SelectFile(zenity.FileFilters{zenity.FileFilter{Name: "Files", Patterns: []string{"*.png", "*.jpg", "*.jpeg"}}})
 		if err != nil && err.Error() != "dialog canceled" {
 			dialog.ShowError(err, e.win)
 			return
@@ -198,7 +199,7 @@ func generateField(field api.Field, itemMap map[string]string, e *editor) *widge
 			for _, fileType := range field.FileTypes {
 				fileTypes = append(fileTypes, "*"+fileType)
 			}
-			file, err := zenity.SelectFile(zenity.FileFilters{{"Files", fileTypes}})
+			file, err := zenity.SelectFile(zenity.FileFilters{zenity.FileFilter{Name: "Files", Patterns: fileTypes}})
 			if err != nil && err.Error() != "dialog canceled" {
 				dialog.ShowError(err, e.win)
 				return
