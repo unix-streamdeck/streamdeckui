@@ -257,6 +257,16 @@ func generateField(field api.Field, itemMap map[string]string, e *editor) *widge
 			item.SetSelected(action)
 		}
 		return widget.NewFormItem(field.Title, item)
+	} else if field.Type == "Password" {
+		item := widget.NewPasswordEntry()
+		item.Text = itemMap[field.Name]
+		item.OnChanged = func(text string) {
+			itemMap[field.Name] = text
+			log.Println(e.currentButton.key.IconHandlerFields["check_command"])
+			e.currentButton.Refresh()
+			e.currentButton.updateKey()
+		}
+		return widget.NewFormItem(field.Title, item)
 	}
 	return nil
 }
